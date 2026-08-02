@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    espeak-ng \
+    libsndfile1 \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+
+# PRE-INSTALL heavy ML dependencies so Docker caches them!
+# This prevents 30-minute rebuilds when you only change a Python script.
+RUN pip install --upgrade pip \
+    && pip install torch>=2.4.0 sentence-transformers chromadb kokoro runpod
+
+COPY src ./src
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY deploy/runpod_handler.py ./runpod_handler.py
+
+# Install the rest of the app
+RUN pip install -e ".[ml]"
+
+# Serverless handler entrypoint for RunPod
+CMD ["python", "-u", "runpod_handler.py"]

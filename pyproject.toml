@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-automation-engine"
+version = "0.1.0"
+description = "Production-grade automated YouTube content pipeline (FastAPI + ARQ + Postgres)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Rayyan" }]
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "pydantic>=2.9.0",
+  "pydantic-settings>=2.6.0",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "asyncpg>=0.30.0",
+  "alembic>=1.14.0",
+  "redis>=5.2.0",
+  "arq>=0.26.1",
+  "httpx>=0.28.0",
+  "aiohttp>=3.11.0",
+  "aiosmtplib>=3.0.1",
+  "openai>=1.55.0",
+  "boto3>=1.35.0",
+  "tenacity>=9.0.0",
+  "prometheus-client>=0.21.0",
+  "python-json-logger>=3.2.0",
+  "google-api-python-client>=2.154.0",
+  "google-auth>=2.36.0",
+  "google-auth-oauthlib>=1.2.0",
+  "cryptography>=43.0.0",
+  "numpy>=1.26.0",
+  "Pillow>=10.4.0",
+  "soundfile>=0.12.1",
+  "librosa>=0.10.2",
+  "requests>=2.32.0",
+  "apify-client>=1.8.0",
+  "fpdf2>=2.7.9",
+  "markdown>=3.6",
+]
+
+[project.optional-dependencies]
+ml = [
+  "torch>=2.4.0",
+  "sentence-transformers>=3.3.0",
+  "chromadb>=0.5.0",
+  "ftfy>=6.3.0",
+  "kokoro>=0.9.2",
+  "clip @ https://github.com/openai/CLIP/archive/refs/heads/main.zip",
+]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "httpx>=0.28.0",
+  "ruff>=0.8.0",
+  "mypy>=1.13.0",
+  "types-requests>=2.32.0",
+  "types-boto3>=1.0.2",
+]
+
+[project.scripts]
+youtube-api = "src.api.main:run"
+youtube-worker = "src.workers.settings:run_worker"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+packages = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.env
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Secrets & local data
+secrets/*
+!secrets/.gitkeep
+*.pem
+client_secret.json
+youtube_token.json
+credentials.json
+
+# Media / cache
+/data/
+*.mp4
+*.wav
+*.jpg
+*.png
+chroma/
+pipeline.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Legacy Colab dump (kept locally, not product)
+# testing_new_visual.py stays in repo as reference until extracted
