@@ -1,40 +1,79 @@
 """Standalone Watchdog Microservice."""
 
 import asyncio
-import time
-import subprocess
 import json
 import os
-from arq.connections import create_pool, RedisSettings
+import subprocess
+import time
+
+from arq.connections import RedisSettings, create_pool
+
 from src.core.config import get_settings
 from src.core.logging import get_logger
-from src.services.watchdog import run_watchdog_benchmark
-from src.services.notifications import dispatch_ledger
-from src.services.youtube_uploader import YouTubeUploader
-from src.services.storage import ObjectStorage
-from src.db.repository import get_job, transition_stage, get_oldest_completed_jobs, delete_heavy_artifacts
 from src.db import get_session_factory
+from src.db.repository import (
+    delete_heavy_artifacts,
+    get_job,
+    get_oldest_completed_jobs,
+    transition_stage,
+)
 from src.domain import JobStage, JobStatus
+from src.services.notifications import dispatch_ledger
+from src.services.storage import ObjectStorage
+from src.services.watchdog import run_watchdog_benchmark
+from src.services.youtube_uploader import YouTubeUploader
 
 logger = get_logger(__name__)
 
+# Compose project workers — all 9 production model queues
+WORKER_CONTAINERS = (
+    "youtube_automation-worker_youtube_shorts-1",
+    "youtube_automation-worker_podcast_audio-1",
+    "youtube_automation-worker_seo_blogs-1",
+    "youtube_automation-worker_web_series-1",
+    "youtube_automation-worker_radio_fm-1",
+    "youtube_automation-worker_ebooks_kdp-1",
+    "youtube_automation-worker_audiobooks_acx-1",
+    "youtube_automation-worker_sleep_stories-1",
+    "youtube_automation-worker_online_courses-1",
+)
+
+
 async def restart_worker_container(justification: str):
-    """General: Restarts the worker container via Docker socket API with justification."""
-    logger.error("watchdog_general_intervention", extra={"msg": "Executing hard restart of worker container.", "justification": justification})
-    try:
-        subprocess.run(
-            ["curl", "-s", "--unix-socket", "/var/run/docker.sock", "-X", "POST", "http://localhost/containers/youtube_automation-worker-1/restart"],
-            check=True
-        )
-        await dispatch_ledger(
-            "GENERAL INTERVENTION: Worker Restarted", 
-            {
-                "Action": "Hard Restart via Docker Socket", 
-                "Justification": justification
-            }
-        )
-    except Exception as e:
-        logger.error("watchdog_docker_restart_failed", extra={"error": str(e)})
+    """Restart all factory worker containers via Docker socket."""
+    logger.error(
+        "watchdog_general_intervention",
+        extra={"msg": "Restarting factory workers.", "justification": justification},
+    )
+    restarted: list[str] = []
+    for name in WORKER_CONTAINERS:
+        try:
+            subprocess.run(
+                [
+                    "curl",
+                    "-s",
+                    "--unix-socket",
+                    "/var/run/docker.sock",
+                    "-X",
+                    "POST",
+                    f"http://localhost/containers/{name}/restart",
+                ],
+                check=False,
+            )
+            restarted.append(name)
+        except Exception as e:
+            logger.error(
+                "watchdog_docker_restart_failed",
+                extra={"error": str(e), "container": name},
+            )
+    await dispatch_ledger(
+        "GENERAL INTERVENTION: Workers Restarted",
+        {
+            "Action": "Hard Restart via Docker Socket",
+            "Containers": ", ".join(restarted),
+            "Justification": justification,
+        },
+    )
 
 async def main():
     logger.info("Watchdog General Daemon initialized. Monitoring Medic Heartbeat and running SRE benchmarks.")
@@ -43,7 +82,7 @@ async def main():
 
     # Load limits
     benchmark_file = os.path.join(os.path.dirname(__file__), "..", "..", "config", "benchmarks.json")
-    with open(benchmark_file, "r") as f:
+    with open(benchmark_file) as f:
         benchmarks = json.load(f)
     tts_limit = benchmarks.get("pipeline", {}).get("kokoro_tts", {}).get("hard_limit_6k", 150.0)
     ffmpeg_limit = benchmarks.get("pipeline", {}).get("ffmpeg_nvenc", {}).get("hard_limit_6k", 900.0)
@@ -168,7 +207,7 @@ async def main():
                                 break
                                 
                             job_id = old_job.id
-                            deleted_count = storage.delete_prefix(f"jobs/{job_id}/")
+                            storage.delete_prefix(f"jobs/{job_id}/")
                             await delete_heavy_artifacts(session, job_id)
                             
                             await dispatch_ledger(
@@ -192,7 +231,7 @@ async def main():
                                 break
                                 
                             job_id = old_job.id
-                            deleted_count = storage.delete_prefix(f"jobs/{job_id}/")
+                            storage.delete_prefix(f"jobs/{job_id}/")
                             await delete_heavy_artifacts(session, job_id)
                             
                             await dispatch_ledger(

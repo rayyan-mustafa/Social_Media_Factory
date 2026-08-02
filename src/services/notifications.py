@@ -1,8 +1,10 @@
 """Notification Dispatcher for multi-channel alerts (Telegram, Gmail, WhatsApp)."""
 
 import os
-import aiohttp
 from email.message import EmailMessage
+
+import aiohttp
+
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)

@@ -4,9 +4,11 @@ Handles pushing viral topics to Airtable for human approval,
 and fetching approved topics back into the pipeline.
 """
 
-import httpx
 import os
-from typing import List, Dict, Any
+from typing import Any
+
+import httpx
+
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +29,7 @@ class AirtableClient:
     def _get_url(self, table_name: str) -> str:
         return f"https://api.airtable.com/v0/{self.base_id}/{table_name}"
 
-    async def push_topic(self, title: str, niche: str, metrics: Dict[str, Any], table_name: str = "YouTube_Shorts") -> bool:
+    async def push_topic(self, title: str, niche: str, metrics: dict[str, Any], table_name: str = "YouTube_Shorts") -> bool:
         """Pushes a newly scraped topic to Airtable with 'Suggested' status."""
         if not self.api_key:
             return False
@@ -57,7 +59,7 @@ class AirtableClient:
                 logger.error("airtable_push_failed", extra={"error": str(e), "topic": title, "table": table_name})
                 return False
 
-    async def get_approved_topics(self, table_name: str) -> List[Dict[str, Any]]:
+    async def get_approved_topics(self, table_name: str) -> list[dict[str, Any]]:
         """Fetches topics from Airtable that have been marked 'Approved'."""
         if not self.api_key:
             return []

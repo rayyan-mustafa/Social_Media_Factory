@@ -30,10 +30,16 @@ async def _render(job_input: dict) -> dict:
         aud = work / f"a_{scene.index}.wav"
         img = work / f"i_{scene.index}.jpg"
         vid = work / f"v_{scene.index}.mp4"
-        tts.synthesize(scene.text, aud)
+        try:
+            tts.synthesize(scene.text, aud)
+        except Exception:
+            tts.synthesize_silence(aud, seconds=3.0)
         url = await media.fetch_best_image_url(scene.visual_query)
         if url:
-            media.download_image(url, img)
+            try:
+                media.download_image(url, img)
+            except Exception:
+                media.placeholder_image(img)
         else:
             media.placeholder_image(img)
         composer.create_scene_video(img, aud, vid)
@@ -45,14 +51,10 @@ async def _render(job_input: dict) -> dict:
     return {"final_mp4_b64": encoded, "title": script.title}
 
 
-def handler(event: dict) -> dict:
-    import asyncio
-
+async def handler(event: dict) -> dict:
+    """Async handler — RunPod's worker already owns the event loop."""
     job_input = event.get("input") or {}
-    try:
-        return asyncio.get_event_loop().run_until_complete(_render(job_input))
-    except RuntimeError:
-        return asyncio.run(_render(job_input))
+    return await _render(job_input)
 
 
 runpod.serverless.start({"handler": handler})

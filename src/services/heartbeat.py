@@ -1,6 +1,6 @@
-import time
 import json
-import os
+import time
+
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 def get_memory_usage() -> float:
     """Reads /proc/meminfo to calculate memory usage percentage."""
     try:
-        with open('/proc/meminfo', 'r') as f:
+        with open('/proc/meminfo') as f:
             lines = f.readlines()
         mem_total = 0
         mem_available = 0

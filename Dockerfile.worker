@@ -1,4 +1,5 @@
-FROM python:3.11-slim AS base
+# Worker image with ML extras (Kokoro / CLIP / Chroma) for the main YouTube path.
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -13,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     espeak-ng \
     libsndfile1 \
     curl \
+    git \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -23,14 +26,11 @@ COPY --chown=appuser:appuser alembic ./alembic
 COPY --chown=appuser:appuser alembic.ini ./
 COPY --chown=appuser:appuser config ./config
 
-# Runtime image: production deps only (never [dev])
-RUN pip install --upgrade pip && pip install -e .
+RUN pip install --upgrade pip && pip install -e ".[ml]"
 
 RUN mkdir -p /data/chroma /tmp/work /tmp/numba_cache /tmp/matplotlib \
     && chown -R appuser:appuser /data /tmp/work /tmp/numba_cache /tmp/matplotlib /app
 
 USER appuser
 
-EXPOSE 8000
-
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["arq", "src.workers.settings.WorkerSettings"]

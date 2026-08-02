@@ -39,16 +39,25 @@ OVH VPS (always on)                    RunPod (on demand, $0 idle)
 
 ```bash
 cp .env.example .env
-# Edit POSTGRES_PASSWORD, S3_SECRET_KEY, LLM_API_KEY
+# Edit POSTGRES_PASSWORD, S3_SECRET_KEY, WAVESPEED_API_KEY
 
 docker compose up -d --build
 curl http://localhost:8000/health
 
-# Enqueue a job
+# Enqueue YouTube_Shorts (direct upload — no MinIO production folder)
 curl -X POST http://localhost:8000/v1/jobs \
   -H "Content-Type: application/json" \
-  -d '{"topic":"The Silk Road","niche":"documentary","idempotency_key":"demo-1"}'
+  -d '{"topic":"The Silk Road","niche":"documentary","business_model":"YouTube_Shorts","idempotency_key":"demo-1"}'
 ```
+
+Night-test harness: `python scripts/night_test_main.py` — see [docs/NIGHT_TEST.md](docs/NIGHT_TEST.md).
+
+Default Compose starts **all nine** production workers. Optional growth tools:
+`docker compose --profile growth up -d`
+
+Compliance: [docs/COMPLIANCE.md](docs/COMPLIANCE.md) · Models: [docs/PRODUCTION_MODELS.md](docs/PRODUCTION_MODELS.md)
+
+Set `API_KEY` in production and send header `X-API-Key`. `/health` returns **503** when degraded.
 
 Without Docker (API + tests only):
 
@@ -72,7 +81,8 @@ pip install -e ".[ml]"
 
 `queued → scripting → tts → media → composing → uploading → succeeded | failed`
 
-Artifacts land in MinIO under `jobs/{id}/…`. Events are append-only in `job_events`.
+Non-YouTube artifacts land in MinIO under `production/{BusinessModel}/job_{id}/…`.
+YouTube_Shorts uploads directly (no production folder). Events are append-only in `job_events`.
 
 ## YouTube auth (headless VPS)
 
@@ -80,20 +90,22 @@ Artifacts land in MinIO under `jobs/{id}/…`. Events are append-only in `job_ev
 2. Locally: `python scripts/youtube_auth_bootstrap.py`
 3. Copy `secrets/youtube_token.json` to the VPS `secrets/` mount (never commit it).
 
-## OVH deploy
+## OVH / VPS production (RunPod for heavy render)
 
 ```bash
-bash deploy/ovh_bootstrap.sh
-# then on VPS:
+# On VPS, after cloning repo + copying .env and secrets/:
+bash deploy/vps_up.sh
+# or:
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-## RunPod image
+Full checklist: [docs/VPS_PRODUCTION.md](docs/VPS_PRODUCTION.md) · Models: [docs/PRODUCTION_MODELS.md](docs/PRODUCTION_MODELS.md)
+
+Build the RunPod endpoint image separately:
 
 ```bash
-docker build -f deploy/Dockerfile.render -t youtube-render:latest .
-# Push to your registry and attach as a Serverless endpoint.
-# Set RUNPOD_ENABLED=true, RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID on the VPS.
+docker build -f deploy/Dockerfile.render -t YOUR_REGISTRY/youtube-render:latest .
+# Push, attach to RunPod Serverless, set RUNPOD_API_KEY + RUNPOD_ENDPOINT_ID + RUNPOD_ENABLED=true
 ```
 
 ## Cost sheet (indicative)

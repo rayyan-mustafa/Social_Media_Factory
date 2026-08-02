@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import librosa
+import soundfile as sf
 
 from src.core.logging import get_logger
 from src.services.avatar_animator import AudioReactiveAvatar
@@ -44,7 +44,7 @@ class VideoComposer:
         fps: int = 25,
     ) -> Path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        duration = float(librosa.get_duration(path=str(audio_path)))
+        duration = float(sf.info(str(audio_path)).duration)
         frames = max(int(duration * fps), fps)
         vf = (
             f"scale={width}:{height},"

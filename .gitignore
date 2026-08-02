@@ -41,5 +41,5 @@ pipeline.log
 Thumbs.db
 .DS_Store
 
-# Legacy Colab dump (kept locally, not product)
-# testing_new_visual.py stays in repo as reference until extracted
+# Legacy Colab dump (archived)
+archive/

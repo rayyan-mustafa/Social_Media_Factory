@@ -47,8 +47,16 @@ class Settings(BaseSettings):
     runpod_enabled: bool = False
 
     discord_webhook_url: str = ""
+    job_webhook_url: str = ""
+    api_key: str = ""
     secret_encryption_key: str = "dev-only-change-me"
     max_job_attempts: int = 3
+    main_queue_name: str = "YouTube_Shorts"
+
+    @property
+    def llm_api_key(self) -> str:
+        """Alias used across services — always WaveSpeed/OpenRouter key."""
+        return self.wavespeed_api_key
 
     @property
     def is_production(self) -> bool:

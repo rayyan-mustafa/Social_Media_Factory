@@ -1,22 +1,25 @@
 """Watchdog Agent for system health monitoring and self-healing."""
 
-import os
-import httpx
 import json
+import os
+
+import httpx
+from arq.connections import RedisSettings, create_pool
 from sqlalchemy import text
 
-from src.db.session import async_session_maker
-from src.core.logging import get_logger
 from src.core.config import get_settings
-from src.services.notifications import dispatch_ledger
 from src.core.exceptions import WatchdogCriticalError
+from src.core.logging import get_logger
+from src.db import get_session_factory
+from src.services.notifications import dispatch_ledger
 
 logger = get_logger(__name__)
 
 async def get_postgres_metrics() -> tuple[int, dict]:
     """Provider-Sourced: Query internal Postgres statistics."""
     try:
-        async with async_session_maker() as session:
+        factory = get_session_factory()
+        async with factory() as session:
             # Check active connections
             result = await session.execute(text(
                 "SELECT count(*) FROM pg_stat_activity WHERE state = 'active';"
@@ -34,7 +37,7 @@ async def get_postgres_metrics() -> tuple[int, dict]:
             # Use benchmark configuration if available
             min_hit_ratio = 90.0
             try:
-                with open("config/benchmarks.json", "r") as f:
+                with open("config/benchmarks.json") as f:
                     config = json.load(f)
                     min_hit_ratio = config["watchdog"]["postgres_min_cache_hit_ratio"]
             except Exception:
@@ -77,7 +80,6 @@ async def get_runpod_metrics() -> tuple[int, dict]:
     except Exception as e:
         return 0, {"error": str(e)}
 
-from arq.connections import create_pool, RedisSettings
 
 async def run_watchdog_benchmark() -> None:
     """Daemon loop evaluating provider-sourced health metrics."""
@@ -112,7 +114,7 @@ async def run_watchdog_benchmark() -> None:
     crit_thresh = 50
     warn_thresh = 100
     try:
-        with open("config/benchmarks.json", "r") as f:
+        with open("config/benchmarks.json") as f:
             config = json.load(f)
             crit_thresh = config["watchdog"]["total_score_critical_threshold"]
             warn_thresh = config["watchdog"]["total_score_warning_threshold"]

@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import os
-from arq.connections import RedisSettings, default_queue_name
+
 from arq import cron
+from arq.connections import RedisSettings, default_queue_name
 
 from src.core.config import get_settings
 from src.core.logging import setup_logging
-from src.workers.pipeline import run_pipeline
 from src.services.heartbeat import write_heartbeat
+from src.workers.pipeline import run_pipeline
 
 
 def _redis_settings() -> RedisSettings:

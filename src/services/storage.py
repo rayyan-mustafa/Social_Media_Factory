@@ -83,3 +83,10 @@ class ObjectStorage:
                 deleted_count += len(objects_to_delete)
         logger.info("s3_delete_prefix", extra={"prefix": prefix, "deleted_count": deleted_count})
         return deleted_count
+
+    def presigned_get_url(self, key: str, expires_in: int = 3600) -> str:
+        return self._client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": self.bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )

@@ -4,6 +4,29 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+# Shared worker defaults (Compose extension — not a service)
+x-worker-base: &worker-base
+  logging: *default-logging
+  build:
+    context: .
+    dockerfile: Dockerfile.worker
+  command: arq src.workers.settings.WorkerSettings
+  env_file: .env
+  environment:
+    NUMBA_CACHE_DIR: /tmp/numba_cache
+    MPLCONFIGDIR: /tmp/matplotlib
+  volumes:
+    - ./secrets:/secrets:ro
+    - workdata:/data
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+  restart: unless-stopped
+
 services:
   postgres:
     logging: *default-logging
@@ -12,6 +35,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-youtube}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-youtube_automation}
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,6 +49,8 @@ services:
   redis:
     logging: *default-logging
     image: redis:7-alpine
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -69,7 +96,9 @@ services:
 
   migrate:
     logging: *default-logging
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: alembic upgrade head
     env_file: .env
     environment:
@@ -80,7 +109,9 @@ services:
 
   api:
     logging: *default-logging
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
     env_file: .env
     environment:
@@ -101,31 +132,63 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
-  x-worker-base: &worker-base
-    logging: *default-logging
-    build: .
-    command: arq src.workers.settings.WorkerSettings
-    env_file: .env
-    volumes:
-      - ./secrets:/secrets:ro
-      - workdata:/data
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
-    restart: unless-stopped
-
+  # Production workers — one ARQ queue per business model (always on)
   worker_youtube_shorts:
     <<: *worker-base
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://minio:9000
       CHROMA_PERSIST_DIR: /data/chroma
       ARQ_QUEUE_NAME: YouTube_Shorts
+
+  # Growth daemons (Airtable / Apify / SRE). Enable: --profile growth
+  business_manager:
+    profiles: ["growth"]
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m src.services.business_manager_daemon
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - ./config:/app/config:ro
+      - ./secrets:/secrets:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  watchdog:
+    profiles: ["growth"]
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m src.services.watchdog_daemon
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
 
   worker_podcast_audio:
     <<: *worker-base
@@ -198,40 +261,6 @@ services:
       S3_ENDPOINT_URL: http://minio:9000
       CHROMA_PERSIST_DIR: /data/chroma
       ARQ_QUEUE_NAME: Online_Courses_Teachable
-
-  watchdog:
-    logging: *default-logging
-    build: .
-    command: python -m src.services.watchdog_daemon
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_URL: http://minio:9000
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
-
-  business_manager:
-    logging: *default-logging
-    build: .
-    command: python -m src.services.business_manager_daemon
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_URL: http://minio:9000
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   pgdata:

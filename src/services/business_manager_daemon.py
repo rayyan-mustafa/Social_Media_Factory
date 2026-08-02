@@ -8,17 +8,18 @@ import asyncio
 import json
 import os
 import time
-from datetime import datetime, timedelta, timezone
-from arq.connections import create_pool, RedisSettings
+from datetime import UTC, datetime, timedelta
+
+from arq.connections import RedisSettings, create_pool
 
 from src.core.config import get_settings
 from src.core.logging import get_logger
-from src.services.viral_pivot import ViralTrendScraper
-from src.services.airtable_client import AirtableClient
-from src.db.repository import create_job, get_latest_job_time, get_business_model_stats
 from src.db import get_session_factory
-from src.domain import JobStage, JobStatus
+from src.db.repository import create_job, get_business_model_stats, get_latest_job_time
+from src.domain import BUSINESS_MODELS
+from src.services.airtable_client import AirtableClient
 from src.services.notifications import dispatch_ledger
+from src.services.viral_pivot import ViralTrendScraper
 
 logger = get_logger(__name__)
 
@@ -33,7 +34,7 @@ async def main():
     
     # Load Business Benchmarks
     benchmark_file = os.path.join(os.path.dirname(__file__), "..", "..", "config", "benchmarks.json")
-    with open(benchmark_file, "r") as f:
+    with open(benchmark_file) as f:
         benchmarks = json.load(f)
     
     biz_benchmarks = benchmarks.get("business", {})
@@ -45,17 +46,8 @@ async def main():
     SCRAPE_INTERVAL = 6 * 3600  # Scrape every 6 hours
     POLL_INTERVAL = 60 * 5      # Poll Airtable for approvals every 5 mins
     
-    TABLES = [
-        "YouTube_Shorts",
-        "Podcast_Audio",
-        "SEO_Blogs",
-        "Web_Series",
-        "Radio_FM",
-        "EBooks_KDP",
-        "Audiobooks_ACX",
-        "Sleep_Stories",
-        "Online_Courses_Teachable"
-    ]
+    # Single source of truth: src.domain.BUSINESS_MODELS
+    TABLES = list(BUSINESS_MODELS)
     
     # Track suspended tables due to poor yield
     suspended_tables = set()
@@ -69,7 +61,7 @@ async def main():
             async with db_factory() as session:
                 for table in TABLES:
                     # Check B: Pipeline Yield (Quality)
-                    since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+                    since_24h = datetime.now(UTC) - timedelta(hours=24)
                     stats = await get_business_model_stats(session, table, since=since_24h)
                     total_finished = stats.get("succeeded", 0) + stats.get("failed", 0)
                     failed = stats.get("failed", 0)
@@ -95,8 +87,8 @@ async def main():
                         if latest_job_time:
                             # Ensure latest_job_time is timezone aware
                             if latest_job_time.tzinfo is None:
-                                latest_job_time = latest_job_time.replace(tzinfo=timezone.utc)
-                            hours_since = (datetime.now(timezone.utc) - latest_job_time).total_seconds() / 3600
+                                latest_job_time = latest_job_time.replace(tzinfo=UTC)
+                            hours_since = (datetime.now(UTC) - latest_job_time).total_seconds() / 3600
                             if hours_since > topic_starvation_hours:
                                 starved = True
                         else:
@@ -112,10 +104,8 @@ async def main():
                                 job = await create_job(session, topic=seed_topic["title"], niche=seed_topic["niche"], business_model=table)
                                 await redis.enqueue_job(
                                     "run_pipeline",
+                                    job.id,
                                     _queue_name=table,
-                                    job_id=job.id,
-                                    topic=seed_topic["title"],
-                                    niche=seed_topic["niche"]
                                 )
                                 await dispatch_ledger(
                                     "BUSINESS INTERVENTION: Pipeline Starved", 
@@ -165,10 +155,8 @@ async def main():
                         job = await create_job(session, topic=topic, niche=niche, business_model=table)
                         await redis.enqueue_job(
                             "run_pipeline",
+                            job.id,
                             _queue_name=table,
-                            job_id=job.id,
-                            topic=topic,
-                            niche=niche
                         )
                         logger.info("business_manager_arq_job_enqueued", extra={"job_id": job.id, "business_model": table})
 

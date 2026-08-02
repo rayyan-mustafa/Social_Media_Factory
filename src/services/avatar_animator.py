@@ -6,6 +6,7 @@ dynamically swaps avatar mouth frames via FFmpeg concat demuxer.
 
 import subprocess
 from pathlib import Path
+
 import librosa
 import numpy as np
 
@@ -23,8 +24,8 @@ class AudioReactiveAvatar:
         y, sr = librosa.load(str(audio_path), sr=None)
         
         # Calculate hop length to match target FPS
-        hop_length = sr // self.fps
-        
+        hop_length = int(sr // self.fps)
+
         # Compute RMS energy
         rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
         

@@ -4,10 +4,12 @@ Monitors multiple sources (Reddit, YouTube, Google Trends, TikTok, Instagram, Fa
 to find spiking historical/documentary topics.
 """
 
-import httpx
 import asyncio
 import os
+
+import httpx
 from apify_client import ApifyClientAsync
+
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)

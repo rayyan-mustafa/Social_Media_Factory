@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select, delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db import Job, JobArtifact, JobEvent, YouTubeUpload
-from src.domain import ArtifactKind, JobStage, JobStatus
+from src.domain import DIRECT_UPLOAD_MODELS, ArtifactKind, JobStage, JobStatus
 
 
 async def get_job(session: AsyncSession, job_id: int) -> Job | None:
@@ -30,6 +30,8 @@ async def create_job(
     idempotency_key: str | None = None,
     upload_to_youtube: bool = False,
 ) -> Job:
+    if business_model in DIRECT_UPLOAD_MODELS:
+        upload_to_youtube = True
     job = Job(
         topic=topic,
         niche=niche,
@@ -60,7 +62,11 @@ async def transition_stage(
     message: str | None = None,
     error: str | None = None,
 ) -> None:
+    from src.domain import can_transition
+
     from_stage = job.stage
+    if not can_transition(from_stage, to_stage):
+        raise ValueError(f"Illegal stage transition {from_stage!r} -> {to_stage.value!r}")
     job.stage = to_stage.value
     if status is not None:
         job.status = status.value

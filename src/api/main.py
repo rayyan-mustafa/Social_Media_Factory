@@ -1,4 +1,4 @@
-"""FastAPI application: health, metrics, jobs."""
+"""FastAPI application: health, metrics, jobs for all 9 production models."""
 
 from __future__ import annotations
 
@@ -6,21 +6,32 @@ from contextlib import asynccontextmanager
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from src import __version__
 from src.core.config import get_settings
 from src.core.logging import get_logger, setup_logging
 from src.db import Job, JobArtifact, get_db_session, get_engine
 from src.db.repository import create_job, get_job, get_job_by_idempotency, list_jobs
-from src.domain import ArtifactKind, ArtifactRead, JobCreate, JobRead, JobStage, JobStatus
+from src.domain import (
+    ArtifactKind,
+    ArtifactRead,
+    JobCreate,
+    JobRead,
+    JobStage,
+    JobStatus,
+    format_family,
+    queue_for_model,
+)
+from src.services.storage import ObjectStorage
 from src.utils.metrics import JOBS_CREATED
+from src.utils.webhooks import notify_job_event
 
 logger = get_logger(__name__)
 
@@ -39,14 +50,27 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="YouTube Automation Engine",
     version=__version__,
-    description="Backend/platform API for the automated documentary content pipeline.",
+    description=(
+        "Production content factory API for nine business models. "
+        "YouTube_Shorts uploads directly to YouTube (no object-store folder). "
+        "Other models write durable artifacts under production/{BusinessModel}/job_{id}/."
+    ),
     lifespan=lifespan,
 )
 
 
+async def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    settings = get_settings()
+    expected = settings.api_key.strip()
+    if not expected:
+        # Dev mode: auth disabled when API_KEY unset
+        return
+    if not x_api_key or x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+
+
 def job_to_read(job: Job) -> JobRead:
     yt_id = None
-    # Avoid async lazy-load (MissingGreenlet) when relationship was not eager-loaded
     state = sa_inspect(job)
     if "youtube_upload" not in state.unloaded:
         upload = job.youtube_upload
@@ -56,6 +80,7 @@ def job_to_read(job: Job) -> JobRead:
         id=job.id,
         topic=job.topic,
         niche=job.niche,
+        business_model=job.business_model or "YouTube_Shorts",
         status=JobStatus(job.status),
         stage=JobStage(job.stage),
         attempt=job.attempt,
@@ -67,7 +92,7 @@ def job_to_read(job: Job) -> JobRead:
 
 
 @app.get("/health")
-async def health(session: AsyncSession = Depends(get_db_session)) -> dict:
+async def health(session: AsyncSession = Depends(get_db_session)) -> JSONResponse:
     settings = get_settings()
     db_ok = False
     redis_ok = False
@@ -81,13 +106,14 @@ async def health(session: AsyncSession = Depends(get_db_session)) -> dict:
         redis_ok = bool(pong)
     except Exception:
         logger.exception("health_redis_failed")
-    status_code = "ok" if db_ok and redis_ok else "degraded"
-    return {
-        "status": status_code,
+    ok = db_ok and redis_ok
+    body = {
+        "status": "ok" if ok else "degraded",
         "version": __version__,
         "env": settings.app_env,
         "checks": {"database": db_ok, "redis": redis_ok},
     }
+    return JSONResponse(body, status_code=200 if ok else 503)
 
 
 @app.get("/metrics")
@@ -99,6 +125,7 @@ async def metrics() -> Response:
 async def create_job_endpoint(
     body: JobCreate,
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_api_key),
 ) -> JobRead:
     if body.idempotency_key:
         existing = await get_job_by_idempotency(session, body.idempotency_key)
@@ -109,12 +136,26 @@ async def create_job_endpoint(
         session,
         topic=body.topic,
         niche=body.niche,
+        business_model=body.business_model,
         idempotency_key=body.idempotency_key,
         upload_to_youtube=body.upload_to_youtube,
     )
-    await app.state.redis.enqueue_job("run_pipeline", job.id)
+    queue = queue_for_model(body.business_model)
+    await app.state.redis.enqueue_job("run_pipeline", job.id, _queue_name=queue)
     JOBS_CREATED.inc()
-    logger.info("job_enqueued", extra={"job_id": job.id})
+    logger.info(
+        "job_enqueued",
+        extra={
+            "job_id": job.id,
+            "business_model": body.business_model,
+            "format_family": format_family(body.business_model),
+            "queue": queue,
+        },
+    )
+    await notify_job_event(
+        "job.queued",
+        {"job_id": job.id, "topic": job.topic, "business_model": job.business_model},
+    )
     return job_to_read(job)
 
 
@@ -123,6 +164,7 @@ async def list_jobs_endpoint(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_api_key),
 ) -> list[JobRead]:
     jobs = await list_jobs(session, limit=limit, offset=offset)
     return [job_to_read(j) for j in jobs]
@@ -132,6 +174,7 @@ async def list_jobs_endpoint(
 async def get_job_endpoint(
     job_id: int,
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_api_key),
 ) -> JobRead:
     result = await session.execute(
         select(Job).options(selectinload(Job.youtube_upload)).where(Job.id == job_id)
@@ -146,6 +189,7 @@ async def get_job_endpoint(
 async def list_artifacts(
     job_id: int,
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_api_key),
 ) -> list[ArtifactRead]:
     job = await get_job(session, job_id)
     if job is None:
@@ -164,6 +208,37 @@ async def list_artifacts(
         )
         for a in arts
     ]
+
+
+@app.get("/v1/jobs/{job_id}/artifacts/{artifact_id}/url")
+async def artifact_presigned_url(
+    job_id: int,
+    artifact_id: int,
+    expires_in: int = Query(3600, ge=60, le=86400),
+    session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_api_key),
+) -> dict:
+    result = await session.execute(
+        select(JobArtifact).where(
+            JobArtifact.id == artifact_id,
+            JobArtifact.job_id == job_id,
+        )
+    )
+    art = result.scalar_one_or_none()
+    if art is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    # Direct YouTube delivery — no MinIO object
+    if art.s3_key.startswith("youtube:"):
+        video_id = art.s3_key.removeprefix("youtube:")
+        return {
+            "artifact_id": art.id,
+            "s3_key": art.s3_key,
+            "url": f"https://www.youtube.com/watch?v={video_id}",
+            "expires_in": None,
+            "delivery": "direct_youtube",
+        }
+    url = ObjectStorage().presigned_get_url(art.s3_key, expires_in=expires_in)
+    return {"artifact_id": art.id, "s3_key": art.s3_key, "url": url, "expires_in": expires_in}
 
 
 def run() -> None:
