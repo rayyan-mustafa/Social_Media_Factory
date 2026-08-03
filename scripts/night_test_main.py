@@ -12,10 +12,14 @@ import time
 import urllib.error
 import urllib.request
 
+import os
 from src.domain import BUSINESS_MODELS
 
 BASE = "http://localhost:8000"
-HEADERS = {"Content-Type": "application/json"}
+HEADERS = {
+    "Content-Type": "application/json",
+    "X-API-Key": os.environ.get("API_KEY", "")
+}
 
 
 def _req(method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:

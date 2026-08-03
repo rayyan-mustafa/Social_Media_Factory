@@ -41,9 +41,13 @@ class Settings(BaseSettings):
     youtube_client_secrets_file: str = "/secrets/client_secret.json"
     youtube_token_file: str = "/secrets/youtube_token.json"
     youtube_privacy_status: str = "private"
+    youtube_api_key: str = ""
 
     runpod_api_key: str = ""
-    runpod_endpoint_id: str = ""
+    runpod_endpoint_id: str = ""  # Legacy/default
+    runpod_vertical_endpoint_id: str = ""
+    runpod_horizontal_endpoint_id: str = ""
+    runpod_educational_endpoint_id: str = ""
     runpod_enabled: bool = False
 
     discord_webhook_url: str = ""

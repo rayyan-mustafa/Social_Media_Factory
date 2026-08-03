@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db import Job, JobArtifact, JobEvent, YouTubeUpload
+from src.db import Job, JobArtifact, JobEvent, Distribution
 from src.domain import DIRECT_UPLOAD_MODELS, ArtifactKind, JobStage, JobStatus
 
 
@@ -105,22 +105,60 @@ async def add_artifact(
     return art
 
 
-async def record_youtube_upload(
+async def get_artifacts(
     session: AsyncSession,
     job_id: int,
-    video_id: str,
-    privacy: str,
-) -> YouTubeUpload:
-    row = YouTubeUpload(job_id=job_id, video_id=video_id, privacy=privacy)
+    kind: ArtifactKind | None = None
+) -> list[JobArtifact]:
+    stmt = select(JobArtifact).where(JobArtifact.job_id == job_id)
+    if kind:
+        stmt = stmt.where(JobArtifact.kind == kind.value)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def record_distribution(
+    session: AsyncSession,
+    job_id: int,
+    platform: str,
+    status: str,
+    external_id: str | None = None,
+    manifest_path: str | None = None,
+) -> Distribution:
+    row = Distribution(
+        job_id=job_id,
+        platform=platform,
+        status=status,
+        external_id=external_id,
+        manifest_path=manifest_path,
+    )
     session.add(row)
     await session.commit()
     await session.refresh(row)
     return row
 
 
+async def get_distribution(
+    session: AsyncSession,
+    job_id: int,
+    platform: str,
+) -> Distribution | None:
+    result = await session.execute(
+        select(Distribution).where(Distribution.job_id == job_id, Distribution.platform == platform)
+    )
+    return result.scalars().first()
+
+
 async def list_jobs(session: AsyncSession, limit: int = 50, offset: int = 0) -> list[Job]:
     result = await session.execute(
         select(Job).order_by(Job.id.desc()).limit(limit).offset(offset)
+    )
+    return list(result.scalars().all())
+
+
+async def get_jobs_by_status(session: AsyncSession, statuses: list[str]) -> list[Job]:
+    result = await session.execute(
+        select(Job).where(Job.status.in_(statuses))
     )
     return list(result.scalars().all())
 
@@ -143,11 +181,24 @@ async def get_business_model_stats(
         .where(Job.business_model == business_model, Job.created_at >= since)
         .group_by(Job.status)
     )
-    stats = {"succeeded": 0, "failed": 0, "queued": 0, "running": 0}
+    stats = {"succeeded": 0, "failed": 0, "queued": 0, "running": 0, "awaiting_manual_publish": 0}
     for status, count in result.all():
         if status in stats:
             stats[status] = count
+            
+    # For yield calculations, awaiting_manual_publish is effectively a success
+    stats["total_succeeded"] = stats["succeeded"] + stats["awaiting_manual_publish"]
     return stats
+
+
+async def get_latest_job_by_topic(session: AsyncSession, topic: str, business_model: str) -> Job | None:
+    result = await session.execute(
+        select(Job)
+        .where(Job.topic == topic, Job.business_model == business_model)
+        .order_by(Job.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_oldest_completed_jobs(session: AsyncSession, limit: int = 5) -> list[Job]:
@@ -177,3 +228,45 @@ async def delete_heavy_artifacts(session: AsyncSession, job_id: int) -> None:
         )
     )
     await session.commit()
+
+
+async def mark_job_published(
+    session: AsyncSession, 
+    job_id: int, 
+    platform: str, 
+    platform_content_id: str
+) -> None:
+    """
+    Transition a job from awaiting_manual_publish to SUCCEEDED and insert a 
+    baseline PerformanceRecord so Module 2 can start tracking it.
+    """
+    from src.db import PerformanceRecord
+    
+    job = await get_job(session, job_id)
+    if not job:
+        raise ValueError(f"Job {job_id} not found")
+        
+    if job.status != JobStatus.AWAITING_MANUAL_PUBLISH.value:
+        raise ValueError(
+            f"Cannot mark job {job_id} as published. "
+            f"Expected status '{JobStatus.AWAITING_MANUAL_PUBLISH.value}', got '{job.status}'"
+        )
+        
+    # Create the baseline analytics tracker so Module 2 hooks onto it
+    record = PerformanceRecord(
+        platform=platform,
+        platform_content_id=platform_content_id,
+        job_id=job.id,
+        views=0,
+        revenue_cents=0
+    )
+    session.add(record)
+    
+    # Use transition_stage to handle validation, status, and event creation
+    await transition_stage(
+        session,
+        job,
+        to_stage=JobStage.SUCCEEDED,
+        status=JobStatus.SUCCEEDED,
+        message=f"Manual publish confirmed on {platform} as {platform_content_id}"
+    )

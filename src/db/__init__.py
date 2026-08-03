@@ -52,8 +52,8 @@ class Job(Base):
 
     artifacts: Mapped[list[JobArtifact]] = relationship(back_populates="job", cascade="all, delete")
     events: Mapped[list[JobEvent]] = relationship(back_populates="job", cascade="all, delete")
-    youtube_upload: Mapped[YouTubeUpload | None] = relationship(
-        back_populates="job", uselist=False, cascade="all, delete"
+    distributions: Mapped[list[Distribution]] = relationship(
+        back_populates="job", cascade="all, delete"
     )
 
 
@@ -84,21 +84,41 @@ class JobEvent(Base):
     job: Mapped[Job] = relationship(back_populates="events")
 
 
-class YouTubeUpload(Base):
-    __tablename__ = "youtube_uploads"
+class Distribution(Base):
+    __tablename__ = "distributions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     job_id: Mapped[int] = mapped_column(
-        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, unique=True
+        ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
     )
-    video_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    privacy: Mapped[str] = mapped_column(String(32), nullable=False, default="private")
-    processing_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    manifest_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     published_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
-    job: Mapped[Job] = relationship(back_populates="youtube_upload")
+    job: Mapped[Job] = relationship(back_populates="distributions")
+
+
+class PerformanceRecord(Base):
+    __tablename__ = "performance_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    platform_content_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
+    )
+    views: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    engagement_metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    revenue_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    collected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    job: Mapped[Job | None] = relationship()
 
 
 _engine = None

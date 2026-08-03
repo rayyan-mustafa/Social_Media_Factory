@@ -27,6 +27,6 @@ def get_adapter(business_model: str) -> FormatFamilyName:
     module = _FAMILY_MODULES[family]
     logger.info(
         "format_adapter_selected",
-        extra={"model": business_model, "family": family, "module": module.FAMILY},
+        extra={"model": business_model, "family": family, "format_module": module.FAMILY},
     )
     return family

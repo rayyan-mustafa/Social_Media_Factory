@@ -29,6 +29,9 @@ credentials.json
 *.wav
 *.jpg
 *.png
+*.tar
+*.log
+rendered_videos/
 chroma/
 pipeline.log
 

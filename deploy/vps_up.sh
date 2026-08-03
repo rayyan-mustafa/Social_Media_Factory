@@ -7,7 +7,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$APP_DIR"
 
-COMPOSE=(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml)
+COMPOSE=(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --profile growth)
 
 if [[ ! -f .env ]]; then
   echo "ERROR: missing .env — copy from your workstation (never commit it)."

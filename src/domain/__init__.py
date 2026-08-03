@@ -7,20 +7,26 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.domain.trends import TrendCandidate
 
 class JobStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    AWAITING_MANUAL_PUBLISH = "awaiting_manual_publish"
+    AWAITING_PLATFORM_APPROVAL = "awaiting_platform_approval"
 
 
 class JobStage(StrEnum):
     QUEUED = "queued"
     SCRIPTING = "scripting"
+    TEXT_PRODUCTION = "text_production"
     TTS = "tts"
+    AUDIO_PRODUCTION = "audio_production"
     MEDIA = "media"
     COMPOSING = "composing"
+    THUMBNAIL = "thumbnail"
     UPLOADING = "uploading"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -41,9 +47,12 @@ class ArtifactKind(StrEnum):
 STAGE_ORDER: list[JobStage] = [
     JobStage.QUEUED,
     JobStage.SCRIPTING,
+    JobStage.TEXT_PRODUCTION,
     JobStage.TTS,
+    JobStage.AUDIO_PRODUCTION,
     JobStage.MEDIA,
     JobStage.COMPOSING,
+    JobStage.THUMBNAIL,
     JobStage.UPLOADING,
     JobStage.SUCCEEDED,
 ]

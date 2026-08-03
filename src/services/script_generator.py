@@ -106,11 +106,22 @@ class ScriptGenerator:
         content = response.choices[0].message.content or ""
         data = _extract_json(content)
         payload = ScriptPayload.model_validate(data)
-        # Normalize scene indices
+        
+        from src.services.scene_splitter import split_into_scenes
+        channel_type = "sleep_story" if "Sleep" in business_model else "history"
+        
+        # Merge LLM text and re-split using our dynamic pacing
+        full_text = payload.content if payload.content else " ".join(s.text for s in payload.scenes)
+        if not full_text:
+            full_text = "Missing content."
+            
+        new_scene_texts = split_into_scenes(full_text, channel_type)
+        
         scenes = [
-            SceneScript(index=i, text=s.text, visual_query=s.visual_query)
-            for i, s in enumerate(payload.scenes[:3])
+            SceneScript(index=i, text=text, visual_query=f"{topic} visualization")
+            for i, text in enumerate(new_scene_texts)
         ]
+        
         result = ScriptPayload(
             title=payload.title,
             description=payload.description,
@@ -130,18 +141,26 @@ class ScriptGenerator:
                 tags=[topic, niche, "document"],
                 content=f"# {topic}\n\nWelcome to this comprehensive guide about {topic} in the {niche} space.",
             )
+        from src.services.scene_splitter import split_into_scenes
+        channel_type = "sleep_story" if "Sleep" in business_model else "history"
+        
+        full_text = (
+            f"In this part of our {niche} documentary on {topic}, "
+            f"we explore a key chapter of the story. "
+            f"It covers the historical context and why it still matters today. " * 3
+        )
+        
+        new_scene_texts = split_into_scenes(full_text, channel_type)
+        
         scenes = [
             SceneScript(
                 index=i,
-                text=(
-                    f"In this part of our {niche} documentary on {topic}, "
-                    f"we explore a key chapter of the story. Scene {i + 1} "
-                    f"covers the historical context and why it still matters today."
-                ),
+                text=text,
                 visual_query=f"{topic} historical photograph",
             )
-            for i in range(3)
+            for i, text in enumerate(new_scene_texts)
         ]
+        
         return ScriptPayload(
             title=f"{topic}: A {niche.title()} Documentary",
             description=f"An automated documentary exploring {topic}.",
