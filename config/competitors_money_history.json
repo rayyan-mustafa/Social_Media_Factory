@@ -26,14 +26,14 @@
       "total_views": 368810880,
       "video_count": 442,
       "uploads_playlist_id": "UUZ4AMrDcNrfy3X6nsU8-rPg",
-      "avg_recent_views": 331491,
-      "median_recent_views": 334514,
+      "avg_recent_views": 331506,
+      "median_recent_views": 334469,
       "upload_freq_per_30d": 3,
       "last_upload_at": "2026-08-10T15:11:02+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 383639,
-      "metrics_updated_at": "2026-08-15T13:30:59.930972+00:00",
+      "views_last_7d_uploads": 383820,
+      "metrics_updated_at": "2026-08-15T13:45:54.005971+00:00",
       "recent_video_ids": [
         "-OI7CL_kyUo",
         "RYdGEYkYCQ4",
@@ -48,8 +48,8 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "20": 2064079.0,
-        "19": 835971.0,
+        "20": 2064222.0,
+        "19": 835984.0,
         "18": 414860.0
       },
       "best_upload_hours_local": [
@@ -71,14 +71,14 @@
       "total_views": 50461618,
       "video_count": 145,
       "uploads_playlist_id": "UUCKpicnIwBP3VPxBAZWDeNA",
-      "avg_recent_views": 216121,
-      "median_recent_views": 205171,
+      "avg_recent_views": 216146,
+      "median_recent_views": 205187,
       "upload_freq_per_30d": 3,
       "last_upload_at": "2026-08-13T12:30:27+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 131429,
-      "metrics_updated_at": "2026-08-15T13:30:59.931526+00:00",
+      "views_last_7d_uploads": 131573,
+      "metrics_updated_at": "2026-08-15T13:45:54.006521+00:00",
       "recent_video_ids": [
         "ZbZfmNVFeE0",
         "yoT76zITRx8",
@@ -93,8 +93,8 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "17": 1986076.0,
-        "19": 175139.0
+        "17": 1986306.0,
+        "19": 175158.0
       },
       "best_upload_hours_local": [
         17,
@@ -114,14 +114,14 @@
       "total_views": 185035166,
       "video_count": 476,
       "uploads_playlist_id": "UUASM0cgfkJxQ1ICmRilfHLw",
-      "avg_recent_views": 1022806,
-      "median_recent_views": 1167472,
+      "avg_recent_views": 1022900,
+      "median_recent_views": 1167737,
       "upload_freq_per_30d": 5,
-      "last_upload_at": "2026-08-14T22:40:08+00:00",
+      "last_upload_at": "2026-08-15T13:45:06+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 1154414,
-      "metrics_updated_at": "2026-08-15T13:30:59.931628+00:00",
+      "views_last_7d_uploads": 1154897,
+      "metrics_updated_at": "2026-08-15T13:45:54.006597+00:00",
       "recent_video_ids": [
         "yh18YXKMk3g",
         "rE75WvOtcu8",
@@ -136,11 +136,11 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "16": 3144279.0,
-        "17": 2499946.0,
-        "18": 1965592.0,
-        "3": 1463948.0,
-        "0": 1154300.0
+        "16": 3144599.0,
+        "17": 2500023.0,
+        "18": 1965751.0,
+        "3": 1463850.0,
+        "0": 1154783.0
       },
       "best_upload_hours_local": [
         16,
@@ -178,7 +178,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.932812+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006668+00:00",
       "recent_video_ids": [
         "ekEeWZOEj_M",
         "gRo7INM4VbE",
@@ -210,14 +210,14 @@
       "video_count": 667,
       "uploads_playlist_id": "UU5Dw9TFdbPJoTDMSiJdIQTA",
       "avg_recent_views": 203513,
-      "median_recent_views": 176249,
+      "median_recent_views": 176251,
       "upload_freq_per_30d": 0,
       "last_upload_at": "2026-07-01T02:46:50+00:00",
       "active_last_7_days": false,
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.932909+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006707+00:00",
       "recent_video_ids": [
         "RlTq7k_IKiw",
         "Xs2r034bQis",
@@ -235,12 +235,12 @@
         "21": 466366.0,
         "7": 325629.0,
         "22": 239672.0,
-        "5": 224138.0,
+        "5": 224137.0,
         "2": 207956.0,
-        "1": 157987.0,
+        "1": 157991.0,
         "23": 151158.0,
         "4": 148105.0,
-        "8": 114120.0
+        "8": 114119.0
       },
       "best_upload_hours_local": [
         21,
@@ -268,7 +268,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 178,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.933035+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006790+00:00",
       "recent_video_ids": [
         "0P2QSZo6eSY",
         "vKVlf27KIL0",
@@ -283,7 +283,7 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "4": 650.0,
+        "4": 652.0,
         "18": 131.0,
         "15": 74.0,
         "21": 72.0,
@@ -308,15 +308,15 @@
       "total_views": 438309926,
       "video_count": 286,
       "uploads_playlist_id": "UUlfEht64_NrzHf8Y0slKEjw",
-      "avg_recent_views": 923767,
-      "median_recent_views": 809239,
+      "avg_recent_views": 923766,
+      "median_recent_views": 809243,
       "upload_freq_per_30d": 0,
       "last_upload_at": "2026-07-02T17:03:14+00:00",
       "active_last_7_days": false,
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": true,
-      "metrics_updated_at": "2026-08-15T13:30:59.933131+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006854+00:00",
       "recent_video_ids": [
         "2GsDQgTEnFk",
         "rds75p7LELk",
@@ -331,9 +331,9 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "23": 4248674.0,
-        "22": 2365068.0,
-        "0": 1448834.0,
+        "23": 4248648.0,
+        "22": 2365073.0,
+        "0": 1448843.0,
         "5": 1175098.0
       },
       "best_upload_hours_local": [
@@ -361,7 +361,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.935788+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006912+00:00",
       "recent_video_ids": [
         "qBNiSBfFem4",
         "czohgszD7tc",
@@ -396,7 +396,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.935908+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.006946+00:00",
       "recent_video_ids": [
         "IJATaG06x0s",
         "lghPAdxufkg",
@@ -443,7 +443,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936054+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007002+00:00",
       "recent_video_ids": [
         "yoOrnviT5KM",
         "VnFXztv239Y",
@@ -459,7 +459,7 @@
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
         "3": 35452.0,
-        "21": 23947.0,
+        "21": 23946.0,
         "5": 11676.0,
         "6": 11274.0,
         "20": 7664.0,
@@ -492,7 +492,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936195+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007057+00:00",
       "recent_video_ids": [
         "YBCiALruGag",
         "hp-PmyCYr8U",
@@ -542,7 +542,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 64,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936291+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007123+00:00",
       "recent_video_ids": [
         "sC8TBr5ouVM",
         "YNzwaPbbLxc",
@@ -557,7 +557,7 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "22": 849.0,
+        "22": 848.0,
         "3": 107.0
       },
       "best_upload_hours_local": [
@@ -583,7 +583,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936421+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007178+00:00",
       "recent_video_ids": [
         "vmXk5NOr2vs",
         "xZuz-e4yt64",
@@ -618,15 +618,15 @@
       "total_views": 105736215,
       "video_count": 1060,
       "uploads_playlist_id": "UUUYK0BJZF3yNb2fw1EdAXUQ",
-      "avg_recent_views": 36589,
-      "median_recent_views": 26089,
+      "avg_recent_views": 36665,
+      "median_recent_views": 26175,
       "upload_freq_per_30d": 10,
       "last_upload_at": "2026-08-14T15:30:17+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 260655,
+      "views_last_7d_uploads": 261388,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936485+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007221+00:00",
       "recent_video_ids": [
         "zFnoF-p6HgQ",
         "TbgZhOqQch4",
@@ -641,13 +641,13 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "20": 112929.0,
-        "23": 105240.0,
-        "17": 73202.0,
-        "18": 24377.0,
-        "19": 22784.0,
-        "15": 18892.0,
-        "16": 8471.0
+        "20": 113041.0,
+        "23": 105265.0,
+        "17": 73388.0,
+        "18": 24537.0,
+        "19": 22925.0,
+        "15": 18959.0,
+        "16": 8538.0
       },
       "best_upload_hours_local": [
         20,
@@ -675,7 +675,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936553+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007285+00:00",
       "recent_video_ids": [
         "gTQr-vHiElQ",
         "0mdl9URm6OA",
@@ -718,7 +718,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936600+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007328+00:00",
       "recent_video_ids": [
         "or_NswoCyQU",
         "pIty1CE0BPY",
@@ -760,7 +760,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936659+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007371+00:00",
       "recent_video_ids": [
         "y6VsoAAPqHo",
         "uV4uChZx850",
@@ -797,15 +797,15 @@
       "total_views": 3087550,
       "video_count": 268,
       "uploads_playlist_id": "UUIhxlSZRVZU5IKkz3jprg1Q",
-      "avg_recent_views": 7679,
-      "median_recent_views": 5870,
+      "avg_recent_views": 7684,
+      "median_recent_views": 5871,
       "upload_freq_per_30d": 10,
       "last_upload_at": "2026-08-13T12:00:25+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 13785,
+      "views_last_7d_uploads": 13832,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936731+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007424+00:00",
       "recent_video_ids": [
         "2qlg2kh_IjI",
         "nny0aHQGeSk",
@@ -820,10 +820,10 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "22": 30415.0,
-        "17": 22525.0,
+        "22": 30432.0,
+        "17": 22561.0,
         "21": 17361.0,
-        "19": 6489.0
+        "19": 6492.0
       },
       "best_upload_hours_local": [
         22,
@@ -842,15 +842,15 @@
       "total_views": 173558272,
       "video_count": 9201,
       "uploads_playlist_id": "UU5zIX8qBAl2CUIyF9AeTjaA",
-      "avg_recent_views": 9502,
-      "median_recent_views": 8233,
+      "avg_recent_views": 9517,
+      "median_recent_views": 8236,
       "upload_freq_per_30d": 10,
       "last_upload_at": "2026-08-13T18:00:06+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 95027,
+      "views_last_7d_uploads": 95173,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936796+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007482+00:00",
       "recent_video_ids": [
         "5OcXRsN7-No",
         "E6Etobixafo",
@@ -865,10 +865,10 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "19": 28455.0,
-        "17": 25677.0,
-        "21": 22843.0,
-        "23": 18052.0
+        "19": 28488.0,
+        "17": 25709.0,
+        "21": 22857.0,
+        "23": 18119.0
       },
       "best_upload_hours_local": [
         19,
@@ -895,7 +895,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936862+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007536+00:00",
       "recent_video_ids": [
         "nq8da6BakAU",
         "hmF1LN0G41M",
@@ -925,15 +925,15 @@
       "total_views": 17798371,
       "video_count": 2105,
       "uploads_playlist_id": "UUioSUqeGrdFq6DEVK3-DXGQ",
-      "avg_recent_views": 4005,
-      "median_recent_views": 3587,
+      "avg_recent_views": 4006,
+      "median_recent_views": 3586,
       "upload_freq_per_30d": 6,
       "last_upload_at": "2026-08-14T22:15:34+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 988,
+      "views_last_7d_uploads": 1000,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936904+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007573+00:00",
       "recent_video_ids": [
         "g_wJE7oUHXo",
         "cLA4ekEjfCU",
@@ -948,8 +948,8 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "3": 28445.0,
-        "1": 9492.0,
+        "3": 28457.0,
+        "1": 9493.0,
         "20": 2115.0
       },
       "best_upload_hours_local": [
@@ -976,7 +976,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.936970+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007624+00:00",
       "recent_video_ids": [
         "JlnXb-fWTTg",
         "cbra1BiRrko",
@@ -1019,7 +1019,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937055+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007706+00:00",
       "recent_video_ids": [
         "mtOHKpjw3e0",
         "GcYsYpfKeyw",
@@ -1056,7 +1056,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937127+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007757+00:00",
       "recent_video_ids": [
         "L1eFuB92Tqo",
         "ZYFq681a-sY",
@@ -1103,7 +1103,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937267+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007816+00:00",
       "recent_video_ids": [
         "glpo60QTjgo",
         "xWbU7pnMdtA"
@@ -1136,7 +1136,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937320+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007843+00:00",
       "recent_video_ids": [
         "-rrhvLo-uOA",
         "5R2JOKgnZrw",
@@ -1183,7 +1183,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937393+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007898+00:00",
       "recent_video_ids": [
         "KUh7y0qlhMM",
         "JXJXUSg7fT8",
@@ -1232,7 +1232,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937484+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007964+00:00",
       "recent_video_ids": [
         "FOWcd6KYqac"
       ],
@@ -1262,7 +1262,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937510+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.007990+00:00",
       "recent_video_ids": [
         "9B0O02nmkJA"
       ],
@@ -1292,7 +1292,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937535+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008012+00:00",
       "recent_video_ids": [
         "buNBpz_3tvw",
         "P_NW27bfr_A",
@@ -1308,7 +1308,7 @@
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
         "4": 1365.0,
-        "22": 947.0,
+        "22": 948.0,
         "19": 56.0
       },
       "best_upload_hours_local": [
@@ -1335,7 +1335,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 1433,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937597+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008064+00:00",
       "recent_video_ids": [
         "Nkc0p182eV4",
         "nF3BPN6Vb6E",
@@ -1375,7 +1375,7 @@
       "total_views": 723267,
       "video_count": 90,
       "uploads_playlist_id": "UUUF4wJhaaR8aO075wJGpjFQ",
-      "avg_recent_views": 559,
+      "avg_recent_views": 560,
       "median_recent_views": 393,
       "upload_freq_per_30d": 3,
       "last_upload_at": "2026-08-11T15:54:42+00:00",
@@ -1383,7 +1383,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 48,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937654+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008119+00:00",
       "recent_video_ids": [
         "sHG-_mhpT9o",
         "YLtjTZSgeWY",
@@ -1398,8 +1398,8 @@
       ],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
-        "21": 4079.0,
-        "23": 486.0,
+        "21": 4080.0,
+        "23": 487.0,
         "5": 382.0,
         "3": 366.0,
         "19": 177.0,
@@ -1424,15 +1424,15 @@
       "total_views": 3351,
       "video_count": 52,
       "uploads_playlist_id": "UUFMGue8Rxuv9glomvYz56zg",
-      "avg_recent_views": 63,
+      "avg_recent_views": 62,
       "median_recent_views": 10,
       "upload_freq_per_30d": 10,
       "last_upload_at": "2026-08-15T11:30:31+00:00",
       "active_last_7_days": true,
       "active_in_window": true,
-      "views_last_7d_uploads": 632,
+      "views_last_7d_uploads": 629,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937731+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008177+00:00",
       "recent_video_ids": [
         "OxtCIdSIilI",
         "PO64u5KtgTk",
@@ -1448,8 +1448,8 @@
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
         "11": 265.0,
-        "16": 188.0,
-        "7": 176.0,
+        "16": 182.0,
+        "7": 178.0,
         "13": 5.0
       },
       "best_upload_hours_local": [
@@ -1477,7 +1477,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937799+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008236+00:00",
       "recent_video_ids": [
         "ELBgOWrcXLc",
         "zQgH9N-c5k0",
@@ -1527,7 +1527,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937858+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008297+00:00",
       "recent_video_ids": [],
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {},
@@ -1551,7 +1551,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 18,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937872+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008309+00:00",
       "recent_video_ids": [
         "EHtIz_PK26o",
         "NhyZUWi7pzQ",
@@ -1592,7 +1592,7 @@
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937926+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008361+00:00",
       "recent_video_ids": [
         "pbF8aXqLcBI",
         "2uElktczaCM",
@@ -1640,7 +1640,7 @@
       "active_in_window": true,
       "views_last_7d_uploads": 414,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.937981+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008510+00:00",
       "recent_video_ids": [
         "0LbfBqoDdJ4",
         "wVmYMv2I9w8",
@@ -1656,7 +1656,7 @@
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
         "16": 272.0,
-        "21": 136.0,
+        "21": 134.0,
         "17": 102.0,
         "18": 88.0,
         "23": 75.0,
@@ -1682,14 +1682,14 @@
       "video_count": 18,
       "uploads_playlist_id": "UUstrJmwS9FQxtijP_3_IFjw",
       "avg_recent_views": 4593,
-      "median_recent_views": 1296,
+      "median_recent_views": 1295,
       "upload_freq_per_30d": 0,
       "last_upload_at": "2026-05-13T17:41:18+00:00",
       "active_last_7_days": false,
       "active_in_window": false,
       "views_last_7d_uploads": 0,
       "eligible_for_titles": false,
-      "metrics_updated_at": "2026-08-15T13:30:59.938068+00:00",
+      "metrics_updated_at": "2026-08-15T13:45:54.008575+00:00",
       "recent_video_ids": [
         "k1xpuoJg5BA",
         "iTMNFAlxYHc",
@@ -1705,7 +1705,7 @@
       "upload_hours_tz": "Asia/Karachi",
       "upload_hour_histogram_local": {
         "20": 20282.0,
-        "22": 20069.0,
+        "22": 20068.0,
         "19": 5513.0,
         "23": 71.0
       },
@@ -1738,7 +1738,7 @@
     "max_new_channels_per_run": 8,
     "max_new_queries_per_run": 12,
     "min_interval_hours": 168,
-    "last_refresh_at": "2026-08-15T13:30:50.744413+00:00"
+    "last_refresh_at": "2026-08-15T13:45:45.589204+00:00"
   },
   "power_filter": {
     "good_channel_views": 50000,
@@ -1752,6 +1752,6 @@
     "good_video_views": 100000,
     "good_video_vs_channel_avg": 1.0,
     "min_video_likes": 500,
-    "last_metrics_at": "2026-08-15T13:30:59.938498+00:00"
+    "last_metrics_at": "2026-08-15T13:45:54.008845+00:00"
   }
 }
