@@ -1,4 +1,4 @@
-# FORCE-LOCKED by live_playlist_force_lock 2026-08-15T13:06:18.727979+00:00 channel=napping_historian
+# FORCE-LOCKED by live_playlist_force_lock 2026-08-15T13:37:19.450120+00:00 channel=napping_historian
 # reason=live_vod_library_seed. Head = featured Live VOD (infinite -stream_loop -1).
 # Do not auto-rank until lock cleared (output/ops/live_playlist_force_lock.json).
 file '/home/ubuntu/new_yt_automation/output/live_vods/napping_historian/catherine_aragon_haunt_live/final.mp4'
