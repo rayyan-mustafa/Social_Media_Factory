@@ -1,0 +1,45 @@
+# =============================================================================
+# FORGOTTEN EMPIRES — OUTLINE (generate)
+# Channel key: forgotten_empires
+# Staged Wave skin — shared farm dual-pacing; RMagine Wiki+Met visuals.
+# Placeholders in {{DOUBLE_BRACES}} are filled at runtime.
+# =============================================================================
+
+Create a detailed {{CHAPTERS_TARGET}}-chapter outline for a
+longform documentary (25–45 min), NOT 3–4h FoC default for YouTube channel **Forgotten Empires** about: {{TOPIC}}
+
+Optional niche / angle notes: {{NICHE_NOTES}}
+
+Brand voice: civilization collapse documentary — ruins, seals, maps, twilight of empires
+
+STRATEGY BLOCKS (obey all three):
+- ACCURACY: Prefer primary sources and clear fact vs legend. Flag contested claims.
+- SPECULATION: Label inference explicitly; acknowledge silences in the record.
+- SAFETY: Formal documentary tone. No graphic gore, sexual content, or profanity.
+  Advertiser-friendly / green-dollar safe for YouTube.
+
+
+
+
+
+
+Target Length & Dual Pacing:
+- Target runtime ~{{TARGET_DURATION_MIN}} minutes (~{{VOICE_WPM}} WPM).
+- Prefer exactly {{CHAPTERS_TARGET}} chapters.
+- Total scene/beat target ~{{TARGET_SCENES}} (band {{MIN_SCENES}}–{{MAX_SCENES}}).
+
+First minutes mandate (Hook / chapter 1) — TITLE PROMISE:
+- Chapter 1 must open on the title claim immediately.
+- First 5–10s: listener feels this is the video the title sold.
+- JSON "hook" field = one-sentence title-promise.
+
+Retention arc:
+- Each chapter ends with an open loop; next chapter pays it off.
+- Anti-recap: never re-establish facts already covered.
+
+
+DUAL PACING (shared factory):
+- Phase A — first ~{{PHASE_A_MAX_WORDS}} words: short gallery beats.
+- Phase B — remaining: longer documentary beats.
+
+Return valid JSON outline only (factory schema).

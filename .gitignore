@@ -1,0 +1,38 @@
+.env
+secrets/*
+!secrets/.gitkeep
+config/youtube_client_secrets.json
+config/youtube_token.json
+config/google_sheets_service_account.json
+output/scripts/*
+!output/scripts/.gitkeep
+output/audio/*
+!output/audio/.gitkeep
+output/images/*
+!output/images/.gitkeep
+output/video/*
+!output/video/.gitkeep
+output/jobs/*
+!output/jobs/.gitkeep
+models/kokoro/*.onnx
+models/kokoro/*.bin
+__pycache__/
+*.pyc
+.venv/
+.venv-kokoro/
+.venv-leadgen/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+# Vercel
+.vercel/
+# Leadgen outputs (may contain PII / real business data)
+output/leadgen/
+output/leadgen_test/
+output/leadgen_live/
+# Client chatbot files (may contain real client details)
+clients/*/chatbot.html
+clients/*/config.json
+# WhatsApp lead capture log
+output/leadgen_live/whatsapp_leads.csv

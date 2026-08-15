@@ -1,0 +1,151 @@
+{
+  "version": 2,
+  "notes": "Seed editing levers from Rayyan competitor winner analysis. Historian anchors on History Calling–tier mystery / slow-burn docs (~20–45 min), NOT FoC 3–4h epics as default. SMM may shift hints via competitor_style_intel.json; runtime overrides live in channel_editing_overrides.json. Frequency stays Rayyan-locked at 15/mo — SMM only touches hours + editing levers. FoC foc_epic is optional advanced only.",
+  "channels": {
+    "napstorian": {
+      "label": "dramatic What-If documentary",
+      "pacing": {
+        "target_length_band_min_s": 540,
+        "target_length_band_max_s": 720,
+        "dual_pacing": true,
+        "plate_hold_s": 45,
+        "plate_hold_max_s": 60,
+        "cold_open_stakes": true,
+        "format_mode": "standard"
+      },
+      "hook_pattern": {
+        "default": "ticking_clock",
+        "preferred": [
+          "ticking_clock",
+          "false_assumption",
+          "execution/betrayal"
+        ],
+        "avoid": [
+          "identity_withheld"
+        ]
+      },
+      "thumbnail_style": {
+        "preset": "napstorian_punch",
+        "focal_subject": "face_or_map",
+        "map_vs_face": "either",
+        "word_count_max": 5,
+        "text_color": "yellow",
+        "stroke": "black_sharp",
+        "contrast_boost": 1.15,
+        "mood": "dramatic"
+      },
+      "compose": {
+        "sfx_density": "high",
+        "beat_interval_s": 55,
+        "overlay_cadence_s": 60,
+        "ken_burns_scale": 1.12,
+        "max_infographic_cards": 16,
+        "sfx_event_cap": 28,
+        "trailer_sfx": true
+      },
+      "audio": {
+        "ambient_bed_db": -30,
+        "historian_sfx_off": false,
+        "compose_sfx_enabled": true,
+        "voice_mode": "tts_multi",
+        "score_mode": "trailer_bed",
+        "ambient_playlist_dir": "assets/audio/ambient",
+        "trailer_playlist_dir": "assets/audio/trailer"
+      },
+        "motion": {
+        "motion_mode": "animated_maps",
+        "pd_clips_count_min": 10,
+        "pd_clips_count_max": 15,
+        "cut_frequency": "moderate_high",
+        "animated_maps": true,
+        "motion_graphics": true
+      }
+    },
+    "napping_historian": {
+      "label": "History Calling–like mystery documentary",
+      "style_anchor": "History Calling",
+      "style_peers": [
+        "History Time",
+        "Reading the Past",
+        "Absolute History",
+        "Real Royalty",
+        "Timeline - World History Documentaries"
+      ],
+      "aspirational_only": [
+        "Fall of Civilizations"
+      ],
+      "ambient_tone_only": [
+        "The French Whisperer",
+        "Sleepy History with Oliver"
+      ],
+      "pacing": {
+        "target_length_band_min_s": 1200,
+        "target_length_band_max_s": 2700,
+        "dual_pacing": true,
+        "plate_hold_s": 120,
+        "plate_hold_max_s": 210,
+        "cold_open_stakes": false,
+        "format_mode": "standard",
+        "optional_formats": [
+          "primary_source_reading",
+          "foc_epic"
+        ],
+        "optional_formats_note": "primary_source_reading optional; foc_epic aspirational only — never default format_mode or length target (not 10800–14400s)",
+        "foc_epic_band_min_s": 10800,
+        "foc_epic_band_max_s": 14400
+      },
+      "hook_pattern": {
+        "default": "false_assumption",
+        "preferred": [
+          "false_assumption",
+          "identity_withheld",
+          "other"
+        ],
+        "avoid": [
+          "ticking_clock",
+          "execution/betrayal"
+        ]
+      },
+      "thumbnail_style": {
+        "preset": "historian_soft",
+        "focal_subject": "artifact_or_portrait",
+        "map_vs_face": "artifact",
+        "word_count_max": 4,
+        "text_color": "soft_white",
+        "stroke": "soft_dark",
+        "contrast_boost": 1.0,
+        "mood": "moody_calm"
+      },
+      "compose": {
+        "sfx_density": "none",
+        "beat_interval_s": 0,
+        "overlay_cadence_s": 180,
+        "ken_burns_scale": 1.06,
+        "max_infographic_cards": 8,
+        "sfx_event_cap": 0,
+        "trailer_sfx": false
+      },
+      "audio": {
+        "ambient_bed_db": -32,
+        "historian_sfx_off": true,
+        "compose_sfx_enabled": false,
+        "voice_mode": "tts_single",
+        "score_mode": "ambient_soft",
+        "ambient_playlist_dir": "assets/audio/ambient",
+        "licensed_score_provider": null,
+        "epidemic_playlist_id": null,
+        "artlist_playlist_id": null
+      },
+      "motion": {
+        "motion_mode": "ken_burns",
+        "pd_clips_count_min": 4,
+        "pd_clips_count_max": 6,
+        "cut_frequency": "low",
+        "animated_maps": false,
+        "motion_graphics": false,
+        "pd_motion_soft": true,
+        "pd_motion_notes": "Soft/slow Ken-Burns-compatible PD pans only (History Calling calm — not action montages)."
+      }
+    }
+  }
+}

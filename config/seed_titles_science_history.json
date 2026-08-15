@@ -1,0 +1,28 @@
+{
+  "channel": "science_history",
+  "brand": "Invention Archives",
+  "production_enabled": false,
+  "videos_per_month_start": 8,
+  "titles": [
+    "The Notebook Newton Tried to Keep Hidden",
+    "How Curie Measured a Glow No One Trusted",
+    "The Plague Doctor's Tools \u2014 History, Not Advice",
+    "Why Faraday's Empty Coil Still Matters",
+    "The Patent War Behind the Light Bulb",
+    "Galileo's Lens and the Night the Sky Changed",
+    "The Laboratory Accident That Renamed an Element",
+    "How Jenner Turned a Milkmaid Story Into History",
+    "The Astrolabe That Crossed Three Empires",
+    "Why Mendel's Peas Were Ignored for Decades",
+    "The Transit of Venus and the Race to Measure Earth",
+    "Tesla's Coil and the Showman Myth vs the Archive",
+    "The Microscope Drawing That Shocked a Royal Society",
+    "How a Ship's Chronometer Solved Longitude",
+    "The Alchemy Notes That Became Chemistry",
+    "Why Pasteur's Swan-Neck Flask Ended a Debate",
+    "The Radioactive Sample Curie Carried in a Pocket",
+    "How Vaccination Entered History Books \u2014 Not a How-To",
+    "The Calculating Engine Babbage Never Finished",
+    "The Observatory That Mapped a Forgotten Comet"
+  ]
+}

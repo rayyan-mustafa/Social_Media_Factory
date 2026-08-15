@@ -1,0 +1,28 @@
+{
+  "target_duration_min": 20,
+  "chapters_target": 10,
+  "max_retries": 2,
+  "dual_pacing": true,
+
+  "phase_a_max_words": 1500,
+  "phase_a_seconds_per_scene": 3,
+  "phase_a_words_min": 6,
+  "phase_a_words_max": 12,
+  "phase_a_target_scenes": 200,
+
+  "phase_b_words_per_scene": 150,
+  "phase_b_seconds_per_scene": 60,
+  "phase_b_words_min": 120,
+  "phase_b_words_max": 180,
+  "phase_b_target_scenes": 10,
+
+  "target_scenes": 210,
+  "min_scenes": 170,
+  "max_scenes": 270,
+  "target_seconds_per_scene": 3,
+
+  "words_per_sentence_min": 6,
+  "words_per_sentence_max": 12,
+
+  "_comment_math": "20 min dual pacing: Phase A first ~1500 words / first ~10 min = ~200 scenes @ 3s (6–12 words). Phase B remaining ~10 min = ~10 scenes @ 60s (~150 words). Total ~210 scenes."
+}

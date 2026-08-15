@@ -1,0 +1,521 @@
+"""PublishModule — YouTube Data API private upload + AI disclosure (Plan C Module 5).
+
+v1 locks:
+- privacyStatus=private always on first upload
+- Gate A must pass (or dry-run)
+- AI / altered-content disclosure in description + containsSyntheticMedia
+- public promote is a separate explicit step (blocked until Policy/Trends later)
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from src.domain.models import GateAResult, GateBResult, PublishResult, ScriptResult
+from src.services.gate_a import run_gate_a
+from src.services.gate_retention import run_gate_r
+from src.services.settings import ROOT, get_settings
+from src.services.youtube_meta import load_youtube_meta
+
+# Match token scopes from youtube_auth / uploaded token.
+# youtube.upload alone is enough for private insert; requesting extra scopes
+# on refresh causes invalid_scope if the refresh token wasn't granted them.
+# Load credentials with the token's embedded scopes (not this list) so upload
+# keeps working until the user re-auths with AUTH_SCOPES for comments/pin.
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+]
+# Full auth for youtube_auth CLI — upload + commentThreads (pin / engage).
+AUTH_SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+]
+
+
+class PublishModuleError(RuntimeError):
+    pass
+
+
+class PublishModule:
+    def __init__(self):
+        get_settings.cache_clear()
+        self.s = get_settings()
+
+    def publish_private(
+        self,
+        *,
+        final_path: Path | str,
+        title: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        thumbnail_path: Path | str | None = None,
+        youtube_meta_dir: Path | str | None = None,
+        script_path: Path | str | None = None,
+        visual_manifest: Path | str | None = None,
+        job_dir: Path | str | None = None,
+        dry_run: bool = False,
+        allow_short: bool = False,
+        allow_placeholders: bool = False,
+    ) -> PublishResult:
+        final_path = Path(final_path)
+        if not final_path.exists():
+            raise PublishModuleError(f"final.mp4 missing: {final_path}")
+
+        script: ScriptResult | None = None
+        if script_path:
+            sp = Path(script_path)
+            if sp.exists():
+                script = ScriptResult.model_validate(
+                    json.loads(sp.read_text(encoding="utf-8"))
+                )
+
+        # Prefer explicit youtube_meta/ pack (title, description, tags, thumbnail).
+        pack: dict[str, Any] = {}
+        meta_dir = Path(youtube_meta_dir) if youtube_meta_dir else None
+        if meta_dir is None and job_dir is not None:
+            cand = Path(job_dir) / "youtube_meta"
+            if cand.is_dir():
+                meta_dir = cand
+        if meta_dir is not None and meta_dir.is_dir():
+            pack = load_youtube_meta(meta_dir)
+
+        title = (
+            title
+            or pack.get("title")
+            or (script.title if script else "")
+            or final_path.stem
+        ).strip()
+        if not title:
+            raise PublishModuleError("title required")
+
+        body_desc = description if description is not None else pack.get("description")
+        if body_desc is None and script is not None:
+            body_desc = self._default_description(script)
+        if body_desc is None:
+            body_desc = title
+        body_desc = self._ensure_ai_disclosure(body_desc)
+
+        tag_list = tags if tags is not None else (pack.get("tags") or None)
+        if not tag_list:
+            tag_list = self._default_tags(script)
+
+        thumb = Path(thumbnail_path) if thumbnail_path else None
+        if thumb is None and pack.get("thumbnail_path"):
+            thumb = Path(pack["thumbnail_path"])
+        if thumb is not None and not thumb.exists():
+            raise PublishModuleError(f"thumbnail missing: {thumb}")
+
+        gate = run_gate_a(
+            final_path,
+            visual_manifest=visual_manifest,
+            # allow_short forces skip; otherwise honor GATE_A_ENFORCE_DURATION
+            enforce_duration=False if allow_short else None,
+            allow_placeholders=allow_placeholders,
+        )
+        if not gate.ok:
+            raise PublishModuleError(
+                "Gate A FAILED — no upload:\n- " + "\n- ".join(gate.errors)
+            )
+
+        import os
+
+        gate_r_enforce = os.getenv("GATE_R_ENFORCE", "false").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        dedupe_removed = None
+        if script is not None:
+            dedupe_removed = int((script.meta or {}).get("dedupe_removed") or 0)
+        gate_r = run_gate_r(
+            final_path=final_path,
+            script_path=script_path,
+            voice_manifest=job_dir / "audio" / "mixed" / "voice_manifest_mixed.json"
+            if job_dir and (Path(job_dir) / "audio" / "mixed" / "voice_manifest_mixed.json").exists()
+            else (Path(job_dir) / "audio" / "voice_manifest.json" if job_dir else None),
+            job_dir=job_dir,
+            enforce=gate_r_enforce and not allow_short,
+            dedupe_removed=dedupe_removed,
+        )
+        if not gate_r.ok and gate_r_enforce:
+            raise PublishModuleError(
+                "Gate R FAILED — retention checks:\n- "
+                + "\n- ".join(gate_r.errors)
+            )
+
+        # Gate B — Policy Agent (Plan C Module 6)
+        from src.agents.policy_agent import PolicyAgent
+
+        gate_b_enforce = bool(self.s.gate_b_enforce) and not allow_short
+        try:
+            gate_b_raw = PolicyAgent().run_gate_b(
+                script=script,
+                title=title,
+                description=body_desc,
+                ai_disclosure=True,
+                made_for_kids=self.s.youtube_made_for_kids,
+                refresh_if_stale=True,
+            )
+            gate_b = GateBResult(
+                ok=gate_b_raw.ok,
+                policy_version=gate_b_raw.policy_version,
+                errors=list(gate_b_raw.errors),
+                warnings=list(gate_b_raw.warnings),
+                checks=dict(gate_b_raw.checks),
+            )
+        except Exception as exc:  # noqa: BLE001
+            gate_b = GateBResult(
+                ok=False,
+                errors=[f"policy agent error: {exc}"],
+            )
+        if not gate_b.ok and gate_b_enforce:
+            raise PublishModuleError(
+                "Gate B FAILED — Policy Agent:\n- " + "\n- ".join(gate_b.errors)
+            )
+
+        out_dir = Path(job_dir) if job_dir else final_path.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        thumb_meta = {
+            "thumbnail_path": str(thumb.resolve()) if thumb else None,
+            "youtube_meta_dir": str(meta_dir.resolve()) if meta_dir else None,
+        }
+
+        if dry_run:
+            result = PublishResult(
+                ok=True,
+                dry_run=True,
+                privacy_status="private",
+                video_id=None,
+                watch_url=None,
+                title=title,
+                description=body_desc,
+                tags=tag_list,
+                final_path=str(final_path.resolve()),
+                gate_a=gate,
+                gate_b=gate_b,
+                ai_disclosure=True,
+                contains_synthetic_media=True,
+                meta={
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "note": "dry_run — no YouTube API call",
+                    "gate_r_ok": gate_r.ok,
+                    "gate_r_warnings": gate_r.warnings,
+                    "gate_r_errors": gate_r.errors,
+                    "gate_b_ok": gate_b.ok,
+                    "gate_b_warnings": gate_b.warnings,
+                    "gate_b_errors": gate_b.errors,
+                    **thumb_meta,
+                },
+            )
+            manifest = out_dir / "publish_manifest.json"
+            manifest.write_text(
+                json.dumps(result.model_dump(), indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            result.publish_manifest_path = str(manifest.resolve())
+            return result
+
+        youtube = self._build_youtube_client()
+        video_id = self._upload(
+            youtube,
+            final_path=final_path,
+            title=title,
+            description=body_desc,
+            tags=tag_list,
+            privacy=self.s.youtube_default_privacy or "private",
+        )
+        thumb_ok = False
+        thumb_err: str | None = None
+        if thumb is not None:
+            try:
+                self._set_thumbnail(youtube, video_id=video_id, thumbnail_path=thumb)
+                thumb_ok = True
+            except Exception as exc:  # noqa: BLE001
+                thumb_err = str(exc)
+        watch = f"https://www.youtube.com/watch?v={video_id}"
+        result = PublishResult(
+            ok=True,
+            dry_run=False,
+            privacy_status=self.s.youtube_default_privacy or "private",
+            video_id=video_id,
+            watch_url=watch,
+            title=title,
+            description=body_desc,
+            tags=tag_list,
+            final_path=str(final_path.resolve()),
+            gate_a=gate,
+            gate_b=gate_b,
+            ai_disclosure=True,
+            contains_synthetic_media=True,
+            meta={
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "category_id": self.s.youtube_category_id,
+                "gate_r_ok": gate_r.ok,
+                "gate_r_warnings": gate_r.warnings,
+                "gate_r_errors": gate_r.errors,
+                "gate_b_ok": gate_b.ok,
+                "gate_b_warnings": gate_b.warnings,
+                "gate_b_errors": gate_b.errors,
+                **thumb_meta,
+                "thumbnail_uploaded": thumb_ok,
+                "thumbnail_error": thumb_err,
+            },
+        )
+        manifest = out_dir / "publish_manifest.json"
+        manifest.write_text(
+            json.dumps(result.model_dump(), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        result.publish_manifest_path = str(manifest.resolve())
+        return result
+
+    def promote_public(self, video_id: str, *, force: bool = False) -> dict[str, Any]:
+        """Explicit public promote — requires Policy Gate B + human unless force."""
+        if not force:
+            from src.agents.policy_agent import PolicyAgent
+
+            gate_b = PolicyAgent().run_gate_b(
+                title=video_id,
+                description=self.s.youtube_ai_disclosure_text,
+                ai_disclosure=True,
+                refresh_if_stale=True,
+            )
+            if not gate_b.ok:
+                raise PublishModuleError(
+                    "Public promote blocked — Gate B:\n- "
+                    + "\n- ".join(gate_b.errors)
+                )
+            raise PublishModuleError(
+                "Public promote blocked (Plan C): human approve required after Gate B. "
+                "Pass force=True only after you reviewed the private upload."
+            )
+        youtube = self._build_youtube_client()
+        body = {"id": video_id, "status": {"privacyStatus": "public"}}
+        resp = (
+            youtube.videos()
+            .update(part="status", body=body)
+            .execute()
+        )
+        return {"video_id": video_id, "privacyStatus": "public", "raw": resp}
+
+    def _default_description(self, script: ScriptResult) -> str:
+        lines = [
+            script.hook.strip() if script.hook else script.title,
+            "",
+            "Chapters / outline:",
+        ]
+        for ch in script.outline.chapters:
+            lines.append(f"- {ch.title}")
+        if script.outline.closer:
+            lines.append("")
+            lines.append(script.outline.closer)
+        return "\n".join(lines).strip()
+
+    def _default_tags(self, script: ScriptResult | None) -> list[str]:
+        from src.services.youtube_meta import normalize_youtube_tags
+
+        tags = [
+            "history",
+            "documentary",
+            "alternate history",
+            "what if history",
+            "historical documentary",
+        ]
+        if script and script.topic:
+            tags.append(script.topic[:40])
+        if script and script.title:
+            tags.append(script.title[:40])
+        return normalize_youtube_tags(tags)
+
+    def _ensure_ai_disclosure(self, description: str) -> str:
+        disc = (self.s.youtube_ai_disclosure_text or "").strip()
+        if not disc:
+            return description
+        if disc.lower() in description.lower():
+            return description
+        return f"{description.rstrip()}\n\n——\n{disc}\n"
+
+    def _build_youtube_client(self):
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2.credentials import Credentials
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from googleapiclient.discovery import build
+        except ImportError as exc:
+            raise PublishModuleError(
+                "YouTube libs missing. Run: "
+                ".venv/bin/pip install google-api-python-client "
+                "google-auth-oauthlib google-auth-httplib2"
+            ) from exc
+
+        secrets = Path(self.s.youtube_client_secrets_path)
+        token_path = Path(self.s.youtube_token_path)
+        if not secrets.is_absolute():
+            secrets = ROOT / secrets
+        if not token_path.is_absolute():
+            token_path = ROOT / token_path
+
+        # Token alone is enough for upload/refresh (it embeds client_id/secret).
+        # Client secrets file is only required for first-time youtube_auth.
+        if not token_path.exists() and not secrets.exists():
+            raise PublishModuleError(
+                f"Missing YouTube OAuth client secrets: {secrets}\n"
+                "Create a Google Cloud OAuth Desktop client, download JSON, save as that path, "
+                "then run: .venv/bin/python -m src.cli.youtube_auth"
+            )
+
+        creds = None
+        if token_path.exists():
+            # Use scopes stored in the token so refresh never asks for more
+            # than was granted (avoids invalid_scope after partial auth).
+            creds = Credentials.from_authorized_user_file(str(token_path))
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                raise PublishModuleError(
+                    f"No valid YouTube token at {token_path}. "
+                    "Run: .venv/bin/python -m src.cli.youtube_auth"
+                )
+            token_path.parent.mkdir(parents=True, exist_ok=True)
+            token_path.write_text(creds.to_json(), encoding="utf-8")
+
+        return build("youtube", "v3", credentials=creds, cache_discovery=False)
+
+    def _upload(
+        self,
+        youtube,
+        *,
+        final_path: Path,
+        title: str,
+        description: str,
+        tags: list[str],
+        privacy: str,
+    ) -> str:
+        from googleapiclient.http import MediaFileUpload
+
+        body: dict[str, Any] = {
+            "snippet": {
+                "title": title[:100],
+                "description": description[:4900],
+                "tags": tags,
+                "categoryId": str(self.s.youtube_category_id),
+            },
+            "status": {
+                "privacyStatus": privacy if privacy in {"private", "unlisted", "public"} else "private",
+                "selfDeclaredMadeForKids": bool(self.s.youtube_made_for_kids),
+                # AI / altered content disclosure (YouTube Data API)
+                "containsSyntheticMedia": True,
+            },
+        }
+        media = MediaFileUpload(str(final_path), mimetype="video/mp4", resumable=True)
+        request = youtube.videos().insert(
+            part="snippet,status", body=body, media_body=media
+        )
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            # status may be None between chunks
+            _ = status
+        video_id = response.get("id")
+        if not video_id:
+            raise PublishModuleError(f"upload returned no id: {response}")
+        return str(video_id)
+
+    def update_packaging(
+        self,
+        video_id: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        thumbnail_path: Path | str | None = None,
+    ) -> dict[str, Any]:
+        """Patch an existing private/public video's snippet + optional thumbnail."""
+        from src.services.youtube_meta import normalize_youtube_tags
+
+        youtube = self._build_youtube_client()
+        out: dict[str, Any] = {"video_id": video_id}
+
+        if title is not None or description is not None or tags is not None:
+            # videos.update requires full snippet for the parts you send — fetch first
+            existing = (
+                youtube.videos()
+                .list(part="snippet", id=video_id)
+                .execute()
+                .get("items")
+                or []
+            )
+            if not existing:
+                raise PublishModuleError(f"video not found: {video_id}")
+            snip = dict(existing[0].get("snippet") or {})
+            if title is not None:
+                snip["title"] = title[:100]
+            if description is not None:
+                snip["description"] = self._ensure_ai_disclosure(description)[:4900]
+            if tags is not None:
+                snip["tags"] = normalize_youtube_tags(tags)
+            # categoryId required on update
+            if not snip.get("categoryId"):
+                snip["categoryId"] = str(self.s.youtube_category_id)
+            body = {"id": video_id, "snippet": snip}
+            youtube.videos().update(part="snippet", body=body).execute()
+            out["snippet_updated"] = True
+            out["tags"] = snip.get("tags") or []
+            out["title"] = snip.get("title")
+
+        if thumbnail_path is not None:
+            thumb = Path(thumbnail_path)
+            if not thumb.exists():
+                raise PublishModuleError(f"thumbnail missing: {thumb}")
+            self._set_thumbnail(youtube, video_id=video_id, thumbnail_path=thumb)
+            out["thumbnail_uploaded"] = True
+            out["thumbnail_path"] = str(thumb.resolve())
+
+        return out
+
+    def schedule_publish_at(self, video_id: str, publish_at_iso: str) -> dict[str, Any]:
+        """Set private video to go public at publishAt (YouTube handles the flip).
+
+        publish_at_iso: UTC timestamp like 2026-08-07T23:00:00Z
+        Note: YouTube requires privacyStatus=private when publishAt is set.
+        """
+        youtube = self._build_youtube_client()
+        body = {
+            "id": video_id,
+            "status": {
+                "privacyStatus": "private",
+                "publishAt": publish_at_iso,
+                "selfDeclaredMadeForKids": bool(self.s.youtube_made_for_kids),
+            },
+        }
+        resp = youtube.videos().update(part="status", body=body).execute()
+        return {
+            "video_id": video_id,
+            "publishAt": publish_at_iso,
+            "privacyStatus": "private",
+            "raw": {"id": resp.get("id"), "status": resp.get("status")},
+        }
+
+    def _set_thumbnail(self, youtube, *, video_id: str, thumbnail_path: Path) -> None:
+        from googleapiclient.http import MediaFileUpload
+
+        suffix = thumbnail_path.suffix.lower()
+        mime = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
+        }.get(suffix, "image/jpeg")
+        media = MediaFileUpload(str(thumbnail_path), mimetype=mime, resumable=False)
+        youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
+
+
+def run_oauth_console() -> Path:
+    """Deprecated helper — use `python -m src.cli.youtube_auth` instead."""
+    raise PublishModuleError("Use: .venv/bin/python -m src.cli.youtube_auth")

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Front Desk — Demo Chatbot</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f4f2ee;
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 460px;
+  }
+  .header {
+    background: var(--brand-color, #1e6b4f);
+    color: white;
+    padding: 18px 20px;
+    border-radius: 16px 16px 0 0;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .chat-window {
+    background: white;
+    height: 480px;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 1px solid #e5e2da;
+    border-right: 1px solid #e5e2da;
+  }
+  .msg {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .msg.bot {
+    background: #f0efe9;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .msg.user {
+    background: var(--brand-color, #1e6b4f);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.typing {
+    background: #f0efe9;
+    align-self: flex-start;
+    color: #999;
+    font-style: italic;
+  }
+  .input-bar {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    border: 1px solid #e5e2da;
+    border-top: none;
+    padding: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .input-bar input[type=text] {
+    flex: 1;
+    border: 1px solid #ddd9cf;
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    outline: none;
+  }
+  .input-bar input[type=text]:focus {
+    border-color: var(--brand-color, #1e6b4f);
+  }
+  button.icon-btn {
+    border: none;
+    background: #f0efe9;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  button.icon-btn.active {
+    background: var(--brand-color, #1e6b4f);
+    color: white;
+  }
+  button.send-btn {
+    border: none;
+    background: var(--brand-color, #1e6b4f);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .lead-banner {
+    background: #fff7e6;
+    border: 1px solid #f0d896;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: #6b5417;
+    margin-top: 10px;
+  }
+  .config-note {
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+  .sample-banner {
+    background: #5c3d2e;
+    color: #f4e8d8;
+    font-size: 12px;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 12px 12px 0 0;
+    letter-spacing: 0.02em;
+  }
+  .voice-status {
+    font-size: 12px;
+    color: var(--brand-color, #1e6b4f);
+    text-align: center;
+    margin-top: 6px;
+    min-height: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sample-banner">SAMPLE DEMO — fictional HVAC shop for portfolio QA. Not a live client. No fake reviews.</div>
+  <div class="header" id="header">
+    <h1 id="biz-name">Loading...</h1>
+    <p id="biz-tag"></p>
+  </div>
+  <div class="chat-window" id="chat-window"></div>
+  <div class="input-bar">
+    <button class="icon-btn" id="mic-btn" title="Speak your question">🎤</button>
+    <input type="text" id="text-input" placeholder="Ask about hours, services, or book..." />
+    <button class="send-btn" id="send-btn">➤</button>
+  </div>
+  <div class="voice-status" id="voice-status"></div>
+  <div class="config-note">
+    Demo build — edit the CONFIG object in this file's &lt;script&gt; to retrain<br>
+    this bot for any client in under 5 minutes.
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — this is the ONLY section you edit per client.
+   Fill in real business details and the bot is "retrained"
+   instantly — no fine-tuning, no RAG, just accurate context.
+   ============================================================ */
+const CONFIG = {
+  businessName: "Peak Heat & Air",
+  tagline: "AI front desk — ask about AC, heat, or book a tech",
+  brandColor: "#1e6b4f",
+  services: [
+    { name: "AC diagnostic visit", price: "$89", duration: "45–60 min" },
+    { name: "AC repair (labor)", price: "from $150", duration: "1–3 hr" },
+    { name: "Furnace tune-up", price: "$129", duration: "60–90 min" },
+    { name: "No-heat / no-cool emergency", price: "from $149 after hours", duration: "priority dispatch" },
+    { name: "Seasonal maintenance plan", price: "$249 / year", duration: "2 visits" }
+  ],
+  hours: {
+    "Mon-Fri": "7:00 AM - 6:00 PM",
+    "Saturday": "8:00 AM - 2:00 PM",
+    "Sunday": "Emergency dispatch only"
+  },
+  location: "Serving Austin, TX metro (ZIP check on booking)",
+  phone: "+1 512 555 0142",
+  bookingPolicy: "Same-day slots when available. Cancel with 4 hours notice or a $49 trip fee may apply. Emergencies (no heat below 40°F / no cool above 95°F indoor) get priority text-back.",
+  extraFaqs: [
+    "We are a licensed HVAC contractor — fictional SAMPLE demo for portfolio only, not a real company.",
+    "Service area: Austin and nearby suburbs within ~25 miles — ask for your ZIP.",
+    "We do not install solar or roofing — HVAC only.",
+    "Financing available on full system replacements after an in-home estimate."
+  ]
+};
+/* ============================================================
+   END CONFIG
+   ============================================================ */
+
+// Auto-detect proxy endpoint:
+//   - Production (Vercel/deployed): POST /api/chat  → api/chat.py serverless function
+//   - Local dev: POST http://127.0.0.1:8787/v1/messages  → scripts/demo_chat_proxy.py
+const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+  ? "http://127.0.0.1:8787/v1/messages"
+  : "/api/chat";
+
+document.documentElement.style.setProperty('--brand-color', CONFIG.brandColor);
+document.getElementById('biz-name').textContent = CONFIG.businessName;
+document.getElementById('biz-tag').textContent = CONFIG.tagline;
+
+function buildSystemPrompt(cfg) {
+  const servicesList = cfg.services.map(s => `- ${s.name}: ${s.price} (${s.duration})`).join('\n');
+  const hoursList = Object.entries(cfg.hours).map(([d,h]) => `- ${d}: ${h}`).join('\n');
+  const faqList = cfg.extraFaqs.map(f => `- ${f}`).join('\n');
+
+  return `You are the friendly front-desk assistant for ${cfg.businessName}, answering questions and helping clients book appointments. Speak like a warm, efficient receptionist — not a corporate bot. Keep replies short (2-4 sentences max) since this is a chat interface.
+
+BUSINESS INFO (use only this — never invent details):
+Services and pricing:
+${servicesList}
+
+Hours:
+${hoursList}
+
+Location: ${cfg.location}
+Phone: ${cfg.phone}
+Booking policy: ${cfg.bookingPolicy}
+
+Additional info:
+${faqList}
+
+RULES:
+- If asked to book: collect their name, desired service, and preferred date/time. Confirm it back clearly, and tell them ${cfg.businessName} will confirm shortly (say this exact phrase: "LEAD_CAPTURED" at the very end of your reply, on its own, so the system can log it — the user will never see that token).
+- If asked something you don't have info on, say you'll have the team follow up directly, and ask for their contact info.
+- Never invent prices, availability, or policies not listed above.
+- For complaints, allergic reactions, or anything sensitive: tell them a team member will call them directly, and ask for their number.
+- Keep tone warm and human, never robotic.`;
+}
+
+const SYSTEM_PROMPT = buildSystemPrompt(CONFIG);
+let conversationHistory = [];
+
+const chatWindow = document.getElementById('chat-window');
+const textInput = document.getElementById('text-input');
+const sendBtn = document.getElementById('send-btn');
+const micBtn = document.getElementById('mic-btn');
+const voiceStatus = document.getElementById('voice-status');
+
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + sender;
+  div.textContent = text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  return div;
+}
+
+function addLeadBanner(text) {
+  const div = document.createElement('div');
+  div.className = 'lead-banner';
+  div.textContent = '✓ Lead captured: ' + text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+// greet on load
+addMessage(`Hi! I'm the AI assistant for ${CONFIG.businessName}. Ask me about our services, hours, or say you'd like to book an appointment.`, 'bot');
+
+async function sendToClaude(userText) {
+  conversationHistory.push({ role: "user", content: userText });
+
+  const typingEl = addMessage('typing...', 'typing');
+
+  try {
+    const response = await fetch(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 300,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    typingEl.remove();
+
+    if (!response.ok || data.error) {
+      addMessage("Demo proxy error — is scripts/demo_chat_proxy.py running? " + (data.error || response.status), 'bot');
+      return;
+    }
+
+    let reply = (data.content || [])
+      .filter(b => b.type === "text")
+      .map(b => b.text)
+      .join("\n");
+
+    if (!reply) {
+      addMessage("Empty model reply — check proxy logs / API credits.", 'bot');
+      return;
+    }
+
+    let leadCaptured = false;
+    if (reply.includes("LEAD_CAPTURED")) {
+      leadCaptured = true;
+      reply = reply.replace("LEAD_CAPTURED", "").trim();
+    }
+
+    conversationHistory.push({ role: "assistant", content: reply });
+    addMessage(reply, 'bot');
+    if (leadCaptured) addLeadBanner(userText.slice(0, 60) + (userText.length > 60 ? '...' : ''));
+
+    speakReply(reply);
+
+  } catch (err) {
+    typingEl.remove();
+    addMessage("Sorry, I'm having trouble connecting right now. Please call us directly or try again shortly.", 'bot');
+    console.error("Claude API error:", err);
+  }
+}
+
+function handleSend() {
+  const text = textInput.value.trim();
+  if (!text) return;
+  addMessage(text, 'user');
+  textInput.value = '';
+  sendToClaude(text);
+}
+
+sendBtn.addEventListener('click', handleSend);
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleSend();
+});
+
+/* ============================================================
+   VOICE — speech-to-text via browser Web Speech API (demo-grade).
+   For a production phone-based voice receptionist, this is
+   replaced server-side with Twilio Voice (call audio in) +
+   Kokoro TTS (voice out) — browser Speech API is only a stand-in
+   here so you can test the "voice" experience in this demo.
+   ============================================================ */
+let recognition = null;
+let listening = false;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onstart = () => {
+    listening = true;
+    micBtn.classList.add('active');
+    voiceStatus.textContent = 'Listening...';
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    textInput.value = transcript;
+    handleSend();
+  };
+
+  recognition.onerror = () => {
+    voiceStatus.textContent = 'Could not hear that — try again.';
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    micBtn.classList.remove('active');
+    setTimeout(() => { voiceStatus.textContent = ''; }, 1500);
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (listening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  });
+} else {
+  micBtn.style.display = 'none';
+}
+
+function speakReply(text) {
+  if (!('speechSynthesis' in window)) return;
+  // Browser TTS stand-in for demo purposes.
+  // Production voice replies should use Kokoro TTS server-side
+  // for a consistent, higher-quality, on-brand voice.
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+</script>
+
+</body>
+</html>

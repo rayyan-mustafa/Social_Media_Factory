@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "skip_day1": [
+    "enterprise_ecom_with_intercom",
+    "government",
+    "licensed_medical_diagnosis",
+    "national_franchise_hq"
+  ],
+  "verticals": {
+    "salon": {
+      "label": "Salons / barbers / spas",
+      "places_types": ["hair_care", "beauty_salon", "spa"],
+      "query": "hair salon",
+      "pain": "no-shows and after-hours DMs that never become bookings",
+      "offer": "7-day AI site + booking chatbot that texts no-show reminders",
+      "gap_weights": { "no_booking": 18, "no_whatsapp": 8 }
+    },
+    "estate": {
+      "label": "Estate / real-estate agents",
+      "places_types": ["real_estate_agency"],
+      "query": "real estate agency",
+      "pain": "leads die in WhatsApp/Facebook with no capture or 24/7 FAQ",
+      "offer": "listing site + chatbot that qualifies buyers and books viewings",
+      "gap_weights": { "no_booking": 12, "no_chat": 16 }
+    },
+    "trucking": {
+      "label": "Trucking / logistics",
+      "places_types": ["moving_company", "storage", "truck_stop"],
+      "query": "trucking company",
+      "pain": "dispatch buried in phone tag; no quote form",
+      "offer": "quote chatbot + simple site that captures loads after hours",
+      "gap_weights": { "no_website": 22, "no_booking": 10 }
+    },
+    "ecommerce": {
+      "label": "Local ecommerce / Shopify-class stores",
+      "places_types": ["clothing_store", "furniture_store", "electronics_store"],
+      "query": "online store pickup",
+      "pain": "Instagram shop, no chat, abandoned DMs",
+      "offer": "storefront + FAQ/order-status chatbot",
+      "gap_weights": { "no_chat": 18, "no_booking": 8 }
+    },
+    "freelance": {
+      "label": "Freelancers / studios needing a site",
+      "places_types": ["photographer", "lawyer", "accounting"],
+      "query": "freelance photographer studio",
+      "pain": "portfolio on Instagram only — clients cannot book",
+      "offer": "one-page site + booking bot",
+      "gap_weights": { "no_website": 24, "no_booking": 16 }
+    },
+    "tiktoker": {
+      "label": "Creators who cannot convert DMs",
+      "places_types": ["point_of_interest"],
+      "query": "content creator studio",
+      "pain": "viral traffic, bio link is a graveyard",
+      "offer": "link-in-bio site + DM-to-booking chatbot",
+      "gap_weights": { "no_booking": 20, "no_website": 16 }
+    },
+    "dentist": {
+      "label": "Dentists",
+      "places_types": ["dentist"],
+      "query": "dentist",
+      "pain": "phone-only booking; nights and weekends lost",
+      "offer": "site + appointment chatbot + missed-call text-back",
+      "gap_weights": { "no_booking": 20 }
+    },
+    "hvac": {
+      "label": "HVAC / home services",
+      "places_types": ["plumber", "electrician", "roofing_contractor"],
+      "query": "HVAC contractor",
+      "pain": "emergency calls go to voicemail",
+      "offer": "mobile-first site + after-hours chatbot that books slots",
+      "gap_weights": { "no_website": 20, "no_booking": 14 }
+    },
+    "autoshop": {
+      "label": "Auto shops",
+      "places_types": ["car_repair"],
+      "query": "auto repair shop",
+      "pain": "estimates only by phone",
+      "offer": "site + chatbot that takes photos and books drop-off",
+      "gap_weights": { "no_booking": 16, "no_website": 14 }
+    },
+    "clinic": {
+      "label": "Clinics / med-spa (non-diagnostic)",
+      "places_types": ["doctor", "physiotherapist"],
+      "query": "medical clinic",
+      "pain": "front desk overflow; no-shows",
+      "offer": "intake chatbot + reminder flow (not medical advice)",
+      "gap_weights": { "no_booking": 18 }
+    },
+    "gym": {
+      "label": "Gyms / studios",
+      "places_types": ["gym"],
+      "query": "gym",
+      "pain": "trial class buried in DMs",
+      "offer": "site + trial-class chatbot",
+      "gap_weights": { "no_booking": 16 }
+    },
+    "wedding": {
+      "label": "Wedding vendors",
+      "places_types": ["wedding_venue"],
+      "query": "wedding photographer",
+      "pain": "seasonal inbox chaos",
+      "offer": "availability bot + package FAQ site",
+      "gap_weights": { "no_booking": 16, "no_website": 12 }
+    }
+  }
+}

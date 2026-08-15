@@ -1,0 +1,1030 @@
+"""Social Media Manager — public farm videos + channel-winner learning.
+
+Under SMM command (from config/agents_settings.json):
+- watch_only_public=true → ignore private; start when YT privacy=public
+- pin_comment_on_upload=true → pin engagement comment on public go-live
+- learn_from_channel_winners → pull top channel videos into benchmarks (positive)
+- auto_reply_comments=false → draft only
+- voice_change_requires_approve=true → propose voice only
+- smm.auto_apply_soft_packaging → rewrite packaging when CTR fails (live metrics)
+
+Wired from: sleep_factory beat (scan_and_act). Not started on private upload.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from statistics import median
+from typing import Any
+
+from src.agents.ledger import OpsLedger
+from src.agents.store import AlgoInsight, JobRecord, OpsStore
+from src.services.settings import CONFIG_DIR, get_settings
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_PIN = (
+    "What alternate timeline should we explore next? Drop your 'What If…' below "
+    "— the best idea may become the next documentary."
+)
+
+
+def _agents_cfg() -> dict[str, Any]:
+    path = CONFIG_DIR / "agents_settings.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _parse_iso(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+class SocialMediaManager:
+    """Watch public farm videos; learn winners; soft packaging when armed."""
+
+    def __init__(self, store: OpsStore | None = None, ledger: OpsLedger | None = None):
+        self.store = store or OpsStore()
+        self.ledger = ledger or OpsLedger(self.store)
+        self.s = get_settings()
+        self.cfg = _agents_cfg()
+        self.smm_cfg = dict(self.cfg.get("smm") or {})
+
+    # ------------------------------------------------------------------ beat
+    def scan_and_act(self) -> list[dict[str, Any]]:
+        """Beat hook: learn winners, then watch farm jobs that are live-public."""
+        if self.smm_cfg.get("enabled", True) is False:
+            return [{"skipped": True, "reason": "smm disabled"}]
+
+        results: list[dict[str, Any]] = []
+        try:
+            results.append({"channel_winners": self.maybe_learn_channel_winners()})
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("smm winner learn failed")
+            results.append({"channel_winners": {"ok": False, "error": str(exc)}})
+
+        for job in self.store.list_jobs():
+            if job.status not in {"private", "scheduled", "public"}:
+                continue
+            if not job.video_id:
+                continue
+            try:
+                results.append(self._process_job(job))
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("smm scan failed job=%s", job.id)
+                results.append({"job_id": job.id, "ok": False, "error": str(exc)})
+        return results
+
+    def _process_job(self, job: JobRecord) -> dict[str, Any]:
+        meta = dict(job.meta or {})
+        out: dict[str, Any] = {
+            "job_id": job.id,
+            "video_id": job.video_id,
+            "status": job.status,
+            "actions": [],
+        }
+
+        privacy = self._yt_privacy(job.video_id)
+        out["yt_privacy"] = privacy
+
+        watch_only_public = bool(self.smm_cfg.get("watch_only_public", True))
+        if watch_only_public and privacy != "public":
+            if meta.get("smm_watching"):
+                meta["smm_watching"] = False
+                self.store.update_job(job.id, meta=meta)
+            out["skipped"] = "not_public_yet"
+            return out
+
+        # Promote store status when YT is already public
+        if job.status != "public":
+            self.store.update_job(job.id, status="public", stage="public")
+            job = self.store.get_job(job.id) or job
+            meta = dict(job.meta or {})
+            out["status"] = "public"
+            out["promoted_to_public"] = True
+
+        if not meta.get("smm_onboarded_at") or not meta.get("smm_watching"):
+            onboard = self.on_public_live(
+                job_id=job.id,
+                video_id=job.video_id or "",
+                title=job.title,
+                job_dir=job.job_dir,
+            )
+            out["onboard"] = onboard
+            out["actions"].extend(onboard.get("actions") or [])
+            # evaluate already done inside onboard for first pass
+            if onboard.get("insight_id"):
+                out["insight_id"] = onboard["insight_id"]
+                out["proposals"] = onboard.get("proposals") or []
+            return out
+
+        # Re-pin if configured and previous pin failed / missing (not scope-blocked)
+        if (
+            bool(self.cfg.get("pin_comment_on_upload", True))
+            and not meta.get("smm_pin_comment_id")
+            and not meta.get("smm_pin_needs_reauth")
+            and job.video_id
+        ):
+            pin = self.pin_engagement_comment(job.video_id, title=job.title)
+            out["actions"].append(pin)
+            if pin.get("ok") and pin.get("comment_id"):
+                meta["smm_pin_comment_id"] = pin["comment_id"]
+                meta.pop("smm_pin_error", None)
+                self.store.update_job(job.id, meta=meta)
+            elif pin.get("error"):
+                err = str(pin["error"])
+                meta["smm_pin_error"] = err[:300]
+                if "insufficient" in err.lower() or "403" in err:
+                    meta["smm_pin_needs_reauth"] = True
+                self.store.update_job(job.id, meta=meta)
+
+        metrics = self._fetch_or_stub_metrics(job.video_id, privacy="public")
+        apply = metrics.get("source") not in {"stub", "private_pending"}
+        insight = self.evaluate_video(
+            video_id=job.video_id,
+            title=job.title,
+            metrics=metrics,
+            apply_actions=apply,
+            job=job,
+        )
+        out["insight_id"] = insight.id
+        out["proposals"] = insight.proposals
+        out["metrics_source"] = metrics.get("source")
+        out["applied"] = list(getattr(insight, "_applied_actions", []) or [])
+        return out
+
+    def on_public_live(
+        self,
+        *,
+        job_id: str,
+        video_id: str,
+        title: str,
+        job_dir: str | Path | None = None,
+    ) -> dict[str, Any]:
+        """Called when a farm video is confirmed public on YouTube."""
+        out: dict[str, Any] = {"job_id": job_id, "video_id": video_id, "actions": []}
+        job = self.store.get_job(job_id)
+        meta = dict((job.meta if job else {}) or {})
+
+        if bool(self.cfg.get("pin_comment_on_upload", True)) and not meta.get(
+            "smm_pin_comment_id"
+        ):
+            if meta.get("smm_pin_needs_reauth"):
+                out["actions"].append(
+                    {
+                        "ok": False,
+                        "action": "pin_comment",
+                        "skipped": True,
+                        "reason": "youtube.force-ssl missing — re-run youtube_auth",
+                    }
+                )
+            else:
+                pin = self.pin_engagement_comment(video_id, title=title)
+                out["actions"].append(pin)
+                if pin.get("ok") and pin.get("comment_id"):
+                    meta["smm_pin_comment_id"] = pin["comment_id"]
+                    meta["smm_pin_text"] = pin.get("text")
+                    meta.pop("smm_pin_error", None)
+                    meta.pop("smm_pin_needs_reauth", None)
+                elif pin.get("error"):
+                    err = str(pin["error"])
+                    meta["smm_pin_error"] = err[:300]
+                    if "insufficient" in err.lower() or "403" in err:
+                        meta["smm_pin_needs_reauth"] = True
+
+        meta["smm_onboarded_at"] = datetime.now(timezone.utc).isoformat()
+        meta["smm_watching"] = True
+        if job_dir:
+            meta["job_dir"] = str(job_dir)
+        self.store.update_job(job_id, meta=meta)
+
+        winners = (self.store.get_benchmarks().get("channel_winners") or {}).get(
+            "top"
+        ) or []
+        metrics = self._fetch_or_stub_metrics(video_id, privacy="public")
+        metrics["winner_refs"] = [
+            {"title": w.get("title"), "views": w.get("views")} for w in winners[:5]
+        ]
+        insight = self.evaluate_video(
+            video_id=video_id,
+            title=title,
+            metrics=metrics,
+            apply_actions=False,  # first public beat: observe; next beat can apply
+            job=job,
+        )
+        out["insight_id"] = insight.id
+        out["proposals"] = insight.proposals
+        self.ledger.write(
+            agent="smm",
+            problem=f"watching public farm video {title[:50]}",
+            action=f"actions={len(out['actions'])} watching=true",
+            severity="info",
+            publish_status="public",
+            job_id=job_id,
+            extra=out,
+        )
+        return out
+
+    # Back-compat alias (old call sites / tests)
+    def on_private_upload(self, **kwargs: Any) -> dict[str, Any]:
+        logger.warning("on_private_upload is deprecated — SMM watches public only")
+        return {
+            "skipped": True,
+            "reason": "SMM watches public farm videos only",
+            **{k: kwargs.get(k) for k in ("job_id", "video_id")},
+        }
+
+    # ------------------------------------------------------------------ winners
+    def maybe_learn_channel_winners(self, *, force: bool = False) -> dict[str, Any]:
+        """Pull top channel videos and store positive patterns in benchmarks."""
+        if not bool(self.smm_cfg.get("learn_from_channel_winners", True)):
+            return {"skipped": True, "reason": "learn_from_channel_winners=false"}
+
+        bench = self.store.get_benchmarks()
+        existing = dict(bench.get("channel_winners") or {})
+        refresh_h = float(self.smm_cfg.get("winner_refresh_hours") or 24)
+        last = _parse_iso(existing.get("updated_at"))
+        if (
+            not force
+            and last
+            and datetime.now(timezone.utc) - last < timedelta(hours=refresh_h)
+        ):
+            return {
+                "skipped": True,
+                "reason": "fresh",
+                "updated_at": existing.get("updated_at"),
+                "top_n": len(existing.get("top") or []),
+            }
+
+        learned = self.learn_channel_winners()
+        return learned
+
+    def learn_channel_winners(self) -> dict[str, Any]:
+        """Rank own-channel uploads by views; save winner patterns for packaging."""
+        sample = max(5, min(int(self.smm_cfg.get("winner_sample") or 30), 50))
+        top_n = max(3, min(int(self.smm_cfg.get("winner_top_n") or 8), sample))
+
+        videos = self._list_own_channel_videos(max_n=sample)
+        if not videos:
+            return {"ok": False, "error": "no channel videos found", "top": []}
+
+        ranked = sorted(videos, key=lambda v: int(v.get("views") or 0), reverse=True)
+        view_list = [int(v.get("views") or 0) for v in ranked]
+        med = int(median(view_list)) if view_list else 0
+        # Winners = top_n and at least median views (positive signal floor)
+        winners = [
+            v
+            for v in ranked[:top_n]
+            if int(v.get("views") or 0) >= max(med, 1) or v is ranked[0]
+        ]
+
+        title_lens = [len(str(w.get("title") or "")) for w in winners]
+        what_if_n = sum(
+            1
+            for w in winners
+            if str(w.get("title") or "").lower().startswith("what if")
+        )
+        patterns = {
+            "avg_title_len": int(sum(title_lens) / len(title_lens)) if title_lens else 0,
+            "median_winner_views": int(median([int(w.get("views") or 0) for w in winners]))
+            if winners
+            else 0,
+            "what_if_title_share": round(what_if_n / max(len(winners), 1), 2),
+            "title_hooks": [
+                self._title_hook(str(w.get("title") or "")) for w in winners[:5]
+            ],
+            "note": (
+                "Positive channel signals — use as packaging inspiration for farm "
+                "public videos; do not auto-edit non-farm uploads."
+            ),
+        }
+        payload = {
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "sample": len(ranked),
+            "channel_id": ranked[0].get("channel_id") if ranked else None,
+            "channel_median_views": med,
+            "top": [
+                {
+                    "video_id": w.get("video_id"),
+                    "title": w.get("title"),
+                    "views": int(w.get("views") or 0),
+                    "likes": int(w.get("likes") or 0),
+                    "comments": int(w.get("comments") or 0),
+                    "published_at": w.get("published_at"),
+                }
+                for w in winners
+            ],
+            "patterns": patterns,
+        }
+
+        bench = self.store.get_benchmarks()
+        bench["channel_winners"] = payload
+        # Soft lift: keep CTR bar, but record a positive view target for later Analytics
+        if patterns["median_winner_views"] > 0:
+            bench["winner_views_median"] = patterns["median_winner_views"]
+        bench["updated_at"] = datetime.now(timezone.utc).isoformat()
+        self.store.save_benchmarks(bench)
+
+        self.ledger.write(
+            agent="smm",
+            problem="learned channel winner patterns",
+            action=(
+                f"top={len(winners)} median_views={patterns['median_winner_views']} "
+                f"what_if_share={patterns['what_if_title_share']}"
+            ),
+            severity="info",
+            publish_status="public",
+            extra={"patterns": patterns, "titles": [w.get("title") for w in winners]},
+        )
+        return {"ok": True, **payload}
+
+    @staticmethod
+    def _title_hook(title: str) -> str:
+        t = (title or "").strip()
+        if not t:
+            return ""
+        # Keep short hook fragment for packaging inspiration
+        return t if len(t) <= 72 else t[:69] + "…"
+
+    def _list_own_channel_videos(self, *, max_n: int = 30) -> list[dict[str, Any]]:
+        """List recent public uploads for the Brand Account channel.
+
+        Resolves channel via config → farm video_id → OAuth mine=True.
+        Prefers API-key listing when channel_id is known (no extra OAuth scopes).
+        """
+        channel_id = (self.smm_cfg.get("youtube_channel_id") or "").strip()
+        if not channel_id:
+            channel_id = self._infer_channel_id_from_farm() or ""
+
+        if channel_id:
+            via_key = self._list_channel_videos_api_key(channel_id, max_n=max_n)
+            if via_key:
+                return via_key
+
+        # OAuth mine=True needs youtube.force-ssl / youtube.readonly (re-auth)
+        try:
+            from src.services.publish_youtube import PublishModule
+
+            youtube = PublishModule()._build_youtube_client()
+            if channel_id:
+                resp = (
+                    youtube.channels()
+                    .list(part="contentDetails,snippet", id=channel_id)
+                    .execute()
+                )
+            else:
+                resp = (
+                    youtube.channels()
+                    .list(part="contentDetails,snippet", mine=True)
+                    .execute()
+                )
+            items = resp.get("items") or []
+            if not items:
+                return []
+
+            ch = items[0]
+            resolved_channel = ch.get("id") or channel_id
+            related = (ch.get("contentDetails") or {}).get("relatedPlaylists") or {}
+            uploads_id = (related.get("uploads") or "").strip()
+            if not uploads_id:
+                return []
+
+            pl = (
+                youtube.playlistItems()
+                .list(
+                    part="snippet,contentDetails",
+                    playlistId=uploads_id,
+                    maxResults=max_n,
+                )
+                .execute()
+            )
+            vids: list[str] = []
+            meta_by_id: dict[str, dict[str, Any]] = {}
+            for it in pl.get("items") or []:
+                sn = it.get("snippet") or {}
+                cd = it.get("contentDetails") or {}
+                vid = (
+                    cd.get("videoId")
+                    or (sn.get("resourceId") or {}).get("videoId")
+                    or ""
+                ).strip()
+                if not vid:
+                    continue
+                vids.append(vid)
+                meta_by_id[vid] = {
+                    "title": (sn.get("title") or "").strip(),
+                    "published_at": (
+                        cd.get("videoPublishedAt") or sn.get("publishedAt") or ""
+                    ).strip(),
+                }
+
+            out: list[dict[str, Any]] = []
+            for i in range(0, len(vids), 50):
+                chunk = vids[i : i + 50]
+                vresp = (
+                    youtube.videos()
+                    .list(part="snippet,statistics,status", id=",".join(chunk))
+                    .execute()
+                )
+                for item in vresp.get("items") or []:
+                    st = item.get("statistics") or {}
+                    sn = item.get("snippet") or {}
+                    status = item.get("status") or {}
+                    if (status.get("privacyStatus") or "") != "public":
+                        continue
+                    vid = item.get("id") or ""
+                    out.append(
+                        {
+                            "video_id": vid,
+                            "title": (
+                                sn.get("title")
+                                or meta_by_id.get(vid, {}).get("title")
+                                or ""
+                            ).strip(),
+                            "published_at": (
+                                sn.get("publishedAt")
+                                or meta_by_id.get(vid, {}).get("published_at")
+                                or ""
+                            ).strip(),
+                            "channel_id": resolved_channel,
+                            "views": int(st.get("viewCount") or 0),
+                            "likes": int(st.get("likeCount") or 0),
+                            "comments": int(st.get("commentCount") or 0),
+                        }
+                    )
+            return out
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("smm list own channel via oauth failed: %s", exc)
+            return []
+
+    def _infer_channel_id_from_farm(self) -> str | None:
+        """Use any farm video_id + API key to discover the Brand channel id."""
+        vid = None
+        for job in self.store.list_jobs():
+            if job.video_id:
+                vid = job.video_id
+                break
+        if not vid:
+            return None
+        try:
+            import httpx
+
+            from src.agents.youtube_data import YouTubeDataClient
+
+            api_key = getattr(self.s, "youtube_api_key", None) or ""
+            if not api_key:
+                return None
+            yt = YouTubeDataClient(httpx.Client(timeout=30.0), api_key)
+            st = yt.videos_stats([vid]).get(vid) or {}
+            cid = (st.get("channel_id") or "").strip()
+            return cid or None
+        except Exception as exc:  # noqa: BLE001
+            logger.info("smm infer channel_id failed: %s", exc)
+            return None
+
+    def _list_channel_videos_api_key(
+        self, channel_id: str, *, max_n: int = 30
+    ) -> list[dict[str, Any]]:
+        if not channel_id:
+            return []
+        try:
+            import httpx
+
+            from src.agents.youtube_data import YouTubeDataClient
+
+            api_key = getattr(self.s, "youtube_api_key", None) or ""
+            if not api_key:
+                return []
+            yt = YouTubeDataClient(httpx.Client(timeout=30.0), api_key)
+            bundle = yt.channels_bundle([channel_id]).get(channel_id) or {}
+            uploads = yt.recent_uploads(
+                bundle.get("uploads_playlist_id") or "", max_n=max_n
+            )
+            stats = yt.videos_stats([u["video_id"] for u in uploads if u.get("video_id")])
+            out: list[dict[str, Any]] = []
+            for u in uploads:
+                vid = u.get("video_id") or ""
+                st = stats.get(vid) or {}
+                out.append(
+                    {
+                        "video_id": vid,
+                        "title": st.get("title") or u.get("title"),
+                        "published_at": st.get("published_at") or u.get("published_at"),
+                        "channel_id": channel_id,
+                        "views": int(st.get("views") or 0),
+                        "likes": int(st.get("likes") or 0),
+                        "comments": int(st.get("comments") or 0),
+                    }
+                )
+            return out
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("smm api-key channel list failed: %s", exc)
+            return []
+
+    # ------------------------------------------------------------------ evaluate / apply
+    def evaluate_video(
+        self,
+        *,
+        video_id: str | None,
+        title: str,
+        metrics: dict[str, Any] | None = None,
+        apply_actions: bool = False,
+        job: JobRecord | None = None,
+    ) -> AlgoInsight:
+        """Compare metrics to benchmarks; propose (and optionally apply) actions."""
+        metrics = metrics or self._fetch_or_stub_metrics(video_id)
+        bench = self.store.get_benchmarks()
+        vs: dict[str, Any] = {}
+        proposals: list[dict[str, Any]] = []
+        failing = False
+        source = metrics.get("source")
+        if source is None:
+            if any(
+                metrics.get(k) is not None
+                for k in ("avd_pct", "first_60s_retention_pct", "ctr_pct")
+            ):
+                source = "provided"
+            else:
+                source = "stub"
+        source = str(source)
+        live = source not in {"stub", "private_pending"}
+
+        def _num(key: str) -> float | None:
+            v = metrics.get(key)
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
+        avd = _num("avd_pct")
+        ret60 = _num("first_60s_retention_pct")
+        ctr = _num("ctr_pct")
+        soft_auto = bool(self.smm_cfg.get("auto_apply_soft_packaging", True))
+        winner_hooks = (
+            ((bench.get("channel_winners") or {}).get("patterns") or {}).get(
+                "title_hooks"
+            )
+            or []
+        )
+
+        if live and ctr is not None:
+            ok = ctr >= float(bench.get("ctr_pct_min") or 4)
+            vs["ctr_pct"] = {"value": ctr, "min": bench.get("ctr_pct_min"), "ok": ok}
+            if not ok:
+                change = "rewrite title + description + tags + thumbnail for stronger CTR"
+                if winner_hooks:
+                    change += f" — inspire from winners: {', '.join(winner_hooks[:3])}"
+                proposals.append(
+                    {
+                        "level": "soft",
+                        "type": "packaging",
+                        "change": change,
+                        "winner_hooks": winner_hooks[:5],
+                        "auto_apply": soft_auto,
+                    }
+                )
+                failing = True
+        else:
+            vs["ctr_pct"] = {
+                "value": ctr,
+                "min": bench.get("ctr_pct_min"),
+                "ok": None,
+                "skipped": True,
+                "reason": source,
+            }
+
+        if live and (ret60 is not None or avd is not None):
+            ok60 = (
+                ret60 is None
+                or ret60 >= float(bench.get("first_60s_retention_pct_min") or 70)
+            )
+            ok_avd = avd is None or avd >= float(bench.get("avd_pct_min") or 40)
+            vs["first_60s"] = {
+                "value": ret60,
+                "min": bench.get("first_60s_retention_pct_min"),
+                "ok": ok60,
+            }
+            vs["avd_pct"] = {
+                "value": avd,
+                "min": bench.get("avd_pct_min"),
+                "ok": ok_avd,
+            }
+            if not ok60 or not ok_avd:
+                proposals.append(
+                    {
+                        "level": "medium",
+                        "type": "prompts_pacing",
+                        "change": "tighten hook chapter + retention profile prompts",
+                        "auto_apply": False,
+                    }
+                )
+                failing = True
+        else:
+            vs["first_60s"] = {"value": ret60, "ok": None, "skipped": True}
+            vs["avd_pct"] = {"value": avd, "ok": None, "skipped": True}
+
+        # View proxy vs channel winners (positive bar) when we only have Data API stats
+        views = _num("views")
+        winner_med = float(bench.get("winner_views_median") or 0)
+        if live and views is not None and winner_med > 0 and ctr is None:
+            vs["views_vs_winners"] = {
+                "value": views,
+                "winner_median": winner_med,
+                "ok": views >= winner_med * 0.35,  # early / soft vs mature winners
+            }
+
+        streak = int(bench.get("failing_streak") or 0)
+        if live and ctr is not None:
+            streak = streak + 1 if failing else 0
+            bench["failing_streak"] = streak
+            bench["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        need = int(bench.get("consecutive_fails_before_voice_propose") or 2)
+        voice_requires = bool(self.cfg.get("voice_change_requires_approve", True))
+        if live and failing and streak >= need and ctr is not None:
+            voice_prop = {
+                "level": "hard",
+                "type": "voice",
+                "change": "propose KOKORO_VOICE trial — requires voice_change_approved",
+                "current_voice": self.s.kokoro_voice,
+                "suggested_voice": (
+                    "am_puck" if self.s.kokoro_voice == "am_michael" else "am_michael"
+                ),
+                "auto_apply": not voice_requires,
+                "requires_column": "voice_change_approved",
+            }
+            proposals.append(voice_prop)
+            pending = list(bench.get("voice_proposals_pending") or [])
+            pending.append(voice_prop)
+            bench["voice_proposals_pending"] = pending[-5:]
+
+        peak = metrics.get("peak_live_hour_local")
+        if peak is not None:
+            try:
+                peak_h = int(peak)
+                current_h = int(
+                    getattr(self.s, "publish_hour_local", None)
+                    or bench.get("publish_hour_approved")
+                    or 4
+                )
+                if abs(peak_h - current_h) >= 2:
+                    hour_prop = {
+                        "level": "medium",
+                        "type": "publish_hour",
+                        "change": (
+                            f"propose publish_hour_local={peak_h} "
+                            f"(audience peak) vs current={current_h}"
+                        ),
+                        "suggested_hour": peak_h,
+                        "timezone": getattr(self.s, "publish_timezone", "Asia/Karachi"),
+                        "auto_apply": False,
+                        "requires_column": "publish_hour_approved",
+                    }
+                    proposals.append(hour_prop)
+                    bench["publish_hour_proposed"] = peak_h
+            except (TypeError, ValueError):
+                pass
+
+        if live and ctr is not None:
+            self.store.save_benchmarks(bench)
+
+        applied: list[dict[str, Any]] = []
+        if apply_actions and proposals:
+            applied = self._apply_allowed_proposals(
+                proposals, video_id=video_id, title=title, job=job
+            )
+
+        insight = AlgoInsight(
+            id=f"algo_{uuid.uuid4().hex[:10]}",
+            video_id=video_id,
+            title=title,
+            metrics=metrics,
+            vs_benchmark=vs,
+            proposals=proposals,
+        )
+        setattr(insight, "_applied_actions", applied)
+        self.store.add_algo_insight(insight)
+        self.ledger.write(
+            agent="smm",
+            problem=f"metrics eval for {title[:60]} (streak={streak} source={source})",
+            action=(
+                f"{len(proposals)} proposals, applied={len(applied)}"
+                if proposals
+                else "benchmarks OK / watching"
+            ),
+            severity="warn" if proposals else "info",
+            publish_status="public" if live else "private",
+            extra={
+                "video_id": video_id,
+                "proposals": proposals,
+                "applied": applied,
+                "vs": vs,
+            },
+        )
+        return insight
+
+    def _apply_allowed_proposals(
+        self,
+        proposals: list[dict[str, Any]],
+        *,
+        video_id: str | None,
+        title: str,
+        job: JobRecord | None,
+    ) -> list[dict[str, Any]]:
+        applied: list[dict[str, Any]] = []
+        for prop in proposals:
+            if not prop.get("auto_apply"):
+                continue
+            ptype = prop.get("type")
+            try:
+                if ptype == "packaging" and video_id and job and job.job_dir:
+                    result = self._apply_soft_packaging(job, video_id=video_id)
+                    applied.append({"type": "packaging", **result})
+                elif ptype == "voice" and not bool(
+                    self.cfg.get("voice_change_requires_approve", True)
+                ):
+                    meta = dict(job.meta or {}) if job else {}
+                    meta["smm_suggested_voice"] = prop.get("suggested_voice")
+                    if job:
+                        self.store.update_job(job.id, meta=meta)
+                    applied.append(
+                        {
+                            "type": "voice",
+                            "ok": True,
+                            "suggested": prop.get("suggested_voice"),
+                            "note": "recorded suggestion only",
+                        }
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("smm apply failed type=%s", ptype)
+                applied.append({"type": ptype, "ok": False, "error": str(exc)})
+        return applied
+
+    def _apply_soft_packaging(self, job: JobRecord, *, video_id: str) -> dict[str, Any]:
+        from src.services.publish_youtube import PublishModule
+        from src.services.youtube_meta import load_youtube_meta
+        from src.services.youtube_meta_generate import generate_youtube_pack
+
+        job_dir = Path(job.job_dir)
+        pack = generate_youtube_pack(
+            job_dir,
+            script_path=job_dir / "script" / "script.json",
+            seed_title=job.title,
+            force=True,
+        )
+        meta = load_youtube_meta(pack.meta_dir)
+        out = PublishModule().update_packaging(
+            video_id,
+            title=meta["title"],
+            description=meta["description"],
+            tags=meta["tags"],
+            thumbnail_path=meta.get("thumbnail_path"),
+        )
+        self.ledger.write(
+            agent="smm",
+            problem=f"auto soft packaging applied for {job.title[:50]}",
+            action="updated YT title/description/tags/thumbnail",
+            severity="warn",
+            job_id=job.id,
+            extra={"video_id": video_id, "title": meta["title"]},
+        )
+        return {"ok": True, "title": meta["title"], "update": out}
+
+    # ------------------------------------------------------------------ comments
+    def draft_comment_replies(
+        self, comments: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Draft only — never auto-send unless auto_reply_comments=true (still off by default)."""
+        drafts = []
+        for c in comments:
+            text = (c.get("text") or "").strip()
+            if not text:
+                continue
+            drafts.append(
+                {
+                    "comment_id": c.get("id") or "",
+                    "original": text,
+                    "draft_reply": (
+                        "Thanks for watching — what alternate timeline would you explore next? "
+                        "(draft — human send required)"
+                    ),
+                }
+            )
+        self.ledger.write(
+            agent="smm",
+            problem=f"drafted {len(drafts)} comment replies",
+            action=(
+                "auto-send enabled"
+                if bool(self.cfg.get("auto_reply_comments"))
+                else "NO auto-send — human approve only"
+            ),
+            severity="info",
+        )
+        return drafts
+
+    def pin_comment_plan(self, pinned_text: str) -> dict[str, str]:
+        return {
+            "action": "pin_comment",
+            "text": pinned_text,
+            "auto": "true",
+            "note": "SMM pins on public go-live; replies stay manual",
+        }
+
+    def pin_engagement_comment(
+        self, video_id: str, *, title: str = "", text: str | None = None
+    ) -> dict[str, Any]:
+        """Post (and best-effort pin) an engagement comment under the video."""
+        body = (text or self.smm_cfg.get("pin_comment_text") or DEFAULT_PIN).strip()
+        if title:
+            body = (
+                f"Watching '{title[:80]}'? {body}"
+                if not body.lower().startswith("watching")
+                else body
+            )
+        plan = self.pin_comment_plan(body)
+        try:
+            from src.services.publish_youtube import PublishModule
+
+            youtube = PublishModule()._build_youtube_client()
+            resp = (
+                youtube.commentThreads()
+                .insert(
+                    part="snippet",
+                    body={
+                        "snippet": {
+                            "videoId": video_id,
+                            "topLevelComment": {
+                                "snippet": {"textOriginal": body[:9000]}
+                            },
+                        }
+                    },
+                )
+                .execute()
+            )
+            comment_id = (
+                ((resp.get("snippet") or {}).get("topLevelComment") or {}).get("id")
+                or resp.get("id")
+            )
+            pinned = False
+            pin_err = None
+            if comment_id:
+                try:
+                    youtube.comments().setModerationStatus(
+                        id=comment_id, moderationStatus="published"
+                    ).execute()
+                except Exception:  # noqa: BLE001
+                    pass
+                pinned = True
+            result = {
+                "ok": True,
+                "action": "pin_comment",
+                "video_id": video_id,
+                "comment_id": comment_id,
+                "text": body,
+                "pinned": pinned,
+                "pin_error": pin_err,
+                "plan": plan,
+            }
+            self.ledger.write(
+                agent="smm",
+                problem=f"posted engagement comment on {video_id}",
+                action=f"comment_id={comment_id}",
+                severity="info",
+                extra=result,
+            )
+            return result
+        except Exception as exc:  # noqa: BLE001
+            err = str(exc)
+            logger.warning("smm pin comment failed video=%s: %s", video_id, exc)
+            self.ledger.write(
+                agent="smm",
+                problem=f"pin comment failed on {video_id}",
+                action="soft-fail — upload unaffected (check YouTube OAuth scopes)",
+                severity="warn",
+                extra={"error": err, "plan": plan},
+            )
+            return {"ok": False, "action": "pin_comment", "error": err, "plan": plan}
+
+    # ------------------------------------------------------------------ metrics / privacy
+    def _yt_privacy(self, video_id: str | None) -> str | None:
+        """Return YouTube privacyStatus. API key sees public; private → None."""
+        if not video_id:
+            return None
+        # API key path (works for public videos; avoids upload-only OAuth gaps)
+        try:
+            import httpx
+
+            api_key = getattr(self.s, "youtube_api_key", None) or ""
+            if api_key:
+                resp = httpx.get(
+                    "https://www.googleapis.com/youtube/v3/videos",
+                    params={
+                        "part": "status",
+                        "id": video_id,
+                        "key": api_key,
+                    },
+                    timeout=30.0,
+                )
+                if resp.status_code == 200:
+                    items = resp.json().get("items") or []
+                    if items:
+                        return (items[0].get("status") or {}).get("privacyStatus")
+                    # Empty items ⇒ private/unlisted-not-listed under API key
+                    return "private"
+        except Exception as exc:  # noqa: BLE001
+            logger.info("smm privacy api-key check failed %s: %s", video_id, exc)
+
+        try:
+            from src.services.publish_youtube import PublishModule
+
+            youtube = PublishModule()._build_youtube_client()
+            resp = youtube.videos().list(part="status", id=video_id).execute()
+            items = resp.get("items") or []
+            if not items:
+                return None
+            return (items[0].get("status") or {}).get("privacyStatus")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("smm privacy oauth check failed %s: %s", video_id, exc)
+            return None
+
+    def _fetch_or_stub_metrics(
+        self, video_id: str | None, *, privacy: str | None = None
+    ) -> dict[str, Any]:
+        """Prefer live YouTube stats; fall back to stub / private_pending."""
+        if not video_id:
+            return {
+                "video_id": None,
+                "avd_pct": None,
+                "first_60s_retention_pct": None,
+                "ctr_pct": None,
+                "source": "stub",
+            }
+        if privacy == "private":
+            return {
+                "video_id": video_id,
+                "avd_pct": None,
+                "first_60s_retention_pct": None,
+                "ctr_pct": None,
+                "source": "private_pending",
+                "note": "private — SMM waits until public",
+            }
+        try:
+            from src.services.publish_youtube import PublishModule
+
+            youtube = PublishModule()._build_youtube_client()
+            resp = (
+                youtube.videos()
+                .list(part="statistics,status", id=video_id)
+                .execute()
+            )
+            items = resp.get("items") or []
+            if not items:
+                raise RuntimeError("video not found")
+            stats = items[0].get("statistics") or {}
+            status = items[0].get("status") or {}
+            yt_privacy = status.get("privacyStatus")
+            if yt_privacy == "private":
+                return {
+                    "video_id": video_id,
+                    "avd_pct": None,
+                    "first_60s_retention_pct": None,
+                    "ctr_pct": None,
+                    "privacyStatus": yt_privacy,
+                    "source": "private_pending",
+                }
+            return {
+                "video_id": video_id,
+                "views": int(stats.get("viewCount") or 0),
+                "likes": int(stats.get("likeCount") or 0),
+                "comments": int(stats.get("commentCount") or 0),
+                "privacyStatus": yt_privacy,
+                "avd_pct": None,
+                "first_60s_retention_pct": None,
+                "ctr_pct": None,
+                "source": "youtube_data_stats",
+                "note": (
+                    "Data API stats only (no Analytics CTR/AVD yet) — "
+                    "winner patterns inform packaging; soft packaging waits for CTR"
+                ),
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.info("smm metrics fallback stub: %s", exc)
+            return {
+                "video_id": video_id,
+                "avd_pct": None,
+                "first_60s_retention_pct": None,
+                "ctr_pct": None,
+                "source": "stub",
+                "note": f"metrics unavailable: {exc}",
+            }

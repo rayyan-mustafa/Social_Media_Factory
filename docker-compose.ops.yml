@@ -1,0 +1,22 @@
+# Optional Compose stack for autonomous ops (Postgres + Redis).
+# Production pipeline still runs on VPS worker; agents use file store if DB unset.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ytlong
+      POSTGRES_PASSWORD: ytlong
+      POSTGRES_DB: ytlong
+    ports:
+      - "5433:5432"
+    volumes:
+      - ytlong_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+volumes:
+  ytlong_pg:

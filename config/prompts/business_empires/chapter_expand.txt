@@ -1,0 +1,40 @@
+# =============================================================================
+# EMPIRE OF COMMERCE — CHAPTER EXPANSION
+# Channel key: business_empires
+# =============================================================================
+
+Write narration beats for ONE chapter of a documentary for **Empire of Commerce**.
+
+Video Topic / Title: {{TITLE}}
+Video hook: {{HOOK}}
+Full outline (context only): {{OUTLINE_JSON}}
+
+Expand THIS chapter only:
+Chapter progress: {{CHAPTER_INDEX}} / {{CHAPTER_TOTAL}}
+Section id: {{CHAPTER_ID}}
+Section title: {{CHAPTER_TITLE}}
+Section goal: {{CHAPTER_GOAL}}
+Key points: {{KEY_POINTS}}
+Target sentence/beat count: {{TARGET_SENTENCES}}
+Pacing phase: {{PACING_PHASE}}
+Pacing rules: {{PACING_RULES}}
+
+Previous chapter summary:
+{{PREVIOUS_SUMMARY}}
+
+Already covered (do NOT repeat):
+{{COVERED_BEATS}}
+
+Brand voice — Empire of Commerce:
+- business empire origin/collapse stories — companies, rivalries, industrial history (NOT stock tips)
+
+SAFETY BLOCK (strict — green-dollar / advertiser-friendly):
+- No profanity, nudity, sexual content, or graphic gore
+- Calm spoken narration only in "text"; visuals only in visual_prompt
+
+
+
+Visual prompts must be museum/archive-friendly (portraits, artifacts, maps, manuscripts,
+instruments, paintings) so Wiki+Met RMagine fetch can hit. Avoid modern stock clichés.
+
+Return factory JSON beats schema only.

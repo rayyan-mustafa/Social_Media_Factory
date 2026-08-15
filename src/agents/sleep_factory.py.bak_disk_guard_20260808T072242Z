@@ -1,0 +1,399 @@
+"""Sleep-mode factory beat — keep farming/scheduling healthy while you sleep.
+
+Overnight defaults (config/agents_settings.json → sleep_beat):
+- enqueue_pipeline + run_pipeline ON → spawn real Script→TTS→RunPod→FFmpeg→private YT
+- Does NOT invent+auto-approve titles (you still set approved=TRUE)
+- Does NOT auto public_approve (schedule arms only after public_approved=TRUE)
+- DOES: policy, watchdog, farm reconcile, harvest if queue low, pick+spawn, schedule arm
+
+HARD RULE: farm spawn is **GREEN-light only** (capacity benchmark). YELLOW/RED
+never start the factory. Prefer the RunPod capacity watchdog cron for
+autonomous starts; keep blind sleep_factory farm DISARMED unless gated.
+
+Preferred autonomy cron (watchdog-gated GREEN-only):
+  */10 * * * * cd /home/ubuntu/new_yt_automation && .venv/bin/python -m src.cli.runpod_watchdog \\
+    >> output/ops/runpod_watchdog.log 2>&1
+
+Cron (DISARMED — do not re-arm blind farm; use watchdog above):
+  # */15 * * * * cd /home/ubuntu/new_yt_automation && .venv/bin/python -m src.cli.sleep_factory beat \\
+  #   >> output/ops/sleep_factory.log 2>&1
+
+Escape hatch: ``python -m src.cli.sleep_factory beat --no-run-pipeline``
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from src.agents.cost_guardian import CostGuardian
+from src.agents.farm import max_concurrent_jobs, reconcile_farms
+from src.agents.ledger import OpsLedger
+from src.agents.policy_agent import PolicyAgent
+from src.agents.schedule_agent import ScheduleAgent
+from src.agents.store import OpsStore
+from src.agents.title_queue import TitleQueue
+from src.agents.watchdog import WatchdogAgent
+from src.agents.worker import pick_and_enqueue
+from src.services.settings import CONFIG_DIR, ROOT
+
+logger = logging.getLogger(__name__)
+
+
+def run_beat(
+    *,
+    harvest_if_queue_low: bool | None = None,
+    enqueue_pipeline: bool | None = None,
+    run_pipeline: bool | None = None,
+    min_queued_titles: int | None = None,
+    max_picks: int | None = None,
+) -> dict[str, Any]:
+    """One unattended cycle. Pipeline spawn defaults ON from sleep_beat config."""
+    beat_cfg = (_agents_cfg().get("sleep_beat") or {})
+    if harvest_if_queue_low is None:
+        harvest_if_queue_low = bool(beat_cfg.get("harvest_if_queue_low", True))
+    if min_queued_titles is None:
+        min_queued_titles = int(beat_cfg.get("min_queued_titles") or 5)
+    if max_picks is None:
+        max_picks = int(
+            beat_cfg.get("max_picks_per_beat")
+            or (_agents_cfg().get("max_jobs_per_pick") or 1)
+        )
+
+    # Config defaults ON for overnight autonomy; CLI --no-run-pipeline overrides
+    cfg_enqueue = bool(beat_cfg.get("enqueue_pipeline", True))
+    cfg_run = bool(beat_cfg.get("run_pipeline", cfg_enqueue))
+    if enqueue_pipeline is None:
+        enqueue_pipeline = cfg_enqueue
+    if run_pipeline is None:
+        run_pipeline = cfg_run
+    # Spawn farm when both knobs allow (CLI --no-run-pipeline clears run_pipeline)
+    do_farm = bool(enqueue_pipeline and run_pipeline)
+    # Hard gate: IMAGE_BACKEND=runpod_pod requires smoke_ok before any farm spawn.
+    smoke_gate_ok = True
+    smoke_gate_msg = "ok"
+    try:
+        from src.runpod.guards import farm_may_use_runpod_pod_stills
+
+        smoke_gate_ok, smoke_gate_msg = farm_may_use_runpod_pod_stills()
+    except Exception as gate_exc:  # noqa: BLE001
+        smoke_gate_ok, smoke_gate_msg = False, str(gate_exc)
+    if do_farm and not smoke_gate_ok:
+        logger.error(
+            "sleep_beat: refusing farm spawn — stills smoke gate closed: %s",
+            smoke_gate_msg,
+        )
+        do_farm = False
+
+    # Hard gate: farm is GREEN-light only (never YELLOW/RED / Secure-only).
+    capacity_green = True
+    capacity_msg = "skipped (farm off)"
+    capacity_classification = None
+    if do_farm:
+        try:
+            from src.runpod.capacity import check_farm_capacity_green
+
+            capacity_green, capacity_msg, bench = check_farm_capacity_green()
+            capacity_classification = (
+                bench.classification if bench is not None else None
+            )
+        except Exception as cap_exc:  # noqa: BLE001
+            capacity_green, capacity_msg = False, str(cap_exc)
+        if not capacity_green:
+            logger.error(
+                "sleep_beat: refusing farm spawn — not GREEN: %s",
+                capacity_msg,
+            )
+            do_farm = False
+    max_c = max_concurrent_jobs()
+
+    store = OpsStore()
+    ledger = OpsLedger(store)
+    queue = TitleQueue()
+    out: dict[str, Any] = {
+        "at": datetime.now(timezone.utc).isoformat(),
+        "steps": {},
+        "config": {
+            "harvest_if_queue_low": harvest_if_queue_low,
+            "min_queued_titles": min_queued_titles,
+            "enqueue_pipeline": enqueue_pipeline,
+            "run_pipeline": run_pipeline,
+            "do_farm": do_farm,
+            "max_picks_per_beat": max_picks,
+            "max_concurrent_jobs": max_c,
+            "stills_smoke_gate_ok": smoke_gate_ok,
+            "stills_smoke_gate": smoke_gate_msg,
+            "farm_green_only": True,
+            "capacity_green": capacity_green,
+            "capacity_classification": capacity_classification,
+        },
+    }
+    out["steps"]["stills_smoke_gate"] = {
+        "ok": smoke_gate_ok,
+        "message": smoke_gate_msg,
+        "do_farm": do_farm,
+    }
+    out["steps"]["capacity_green_gate"] = {
+        "ok": capacity_green,
+        "message": capacity_msg,
+        "classification": capacity_classification,
+        "green_only": True,
+        "do_farm": do_farm,
+    }
+
+    # 1) Policy freshness
+    try:
+        snap = PolicyAgent(store, ledger).refresh()
+        out["steps"]["policy"] = {
+            "version": snap.version,
+            "compile_ok": snap.compile_ok,
+        }
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["policy"] = {"error": str(exc)}
+        ledger.write(
+            agent="sleep_factory",
+            problem=f"policy refresh failed: {exc}",
+            action="continue beat",
+            severity="warn",
+        )
+
+    # 2) Watchdog stuck jobs
+    try:
+        out["steps"]["watchdog"] = WatchdogAgent(store, ledger).scan_stuck_jobs()
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["watchdog"] = {"error": str(exc)}
+
+    # 2b) Reconcile dead farm PIDs; spawn orphan queued jobs if farming enabled
+    try:
+        out["steps"]["farm_reconcile"] = reconcile_farms(
+            store=store,
+            ledger=ledger,
+            queue=queue,
+            spawn_queued=do_farm,
+        )
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["farm_reconcile"] = {"error": str(exc)}
+
+    # 2c) RepairWatchdog — classify failed jobs, repair, resume farm
+    try:
+        from src.agents.repair_watchdog import RepairWatchdog
+
+        out["steps"]["repair_watchdog"] = RepairWatchdog(
+            store, ledger, queue
+        ).scan_and_repair(spawn=do_farm)
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["repair_watchdog"] = {"error": str(exc)}
+
+    # 2c2) SMM — onboard private uploads, pin comments, eval + allowed actions
+    try:
+        from src.agents.smm_agent import SocialMediaManager
+
+        out["steps"]["smm"] = SocialMediaManager(store, ledger).scan_and_act()
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["smm"] = {"error": str(exc)}
+
+    # 2d) Competitors / search-query refresh (does not block when channel_ids empty)
+    if bool(beat_cfg.get("competitors_refresh_if_due", True)):
+        try:
+            from src.agents.competitors_agent import CompetitorsAgent
+
+            out["steps"]["competitors_refresh"] = CompetitorsAgent(
+                store, ledger
+            ).refresh()
+        except Exception as exc:  # noqa: BLE001
+            out["steps"]["competitors_refresh"] = {"error": str(exc)}
+    else:
+        out["steps"]["competitors_refresh"] = {"skipped": True}
+
+    # 2e) Power metrics — daily cadence (full refresh() also scores when it writes)
+    try:
+        from src.agents.competitors_agent import CompetitorsAgent, metrics_is_due
+
+        agent = CompetitorsAgent(store, ledger)
+        cref = out["steps"].get("competitors_refresh") or {}
+        already = isinstance(cref.get("metrics"), dict) and not cref["metrics"].get(
+            "error"
+        )
+        due, reason = metrics_is_due(agent.cfg)
+        if already:
+            out["steps"]["competitors_metrics"] = {
+                "from_refresh": True,
+                **(cref.get("metrics") or {}),
+            }
+        elif due:
+            out["steps"]["competitors_metrics"] = agent.refresh_metrics()
+        else:
+            out["steps"]["competitors_metrics"] = {
+                "skipped": True,
+                "reason": reason,
+            }
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["competitors_metrics"] = {"error": str(exc)}
+
+    # 3) Harvest original titles if any channel stock thin (~15 per sheet)
+    if harvest_if_queue_low:
+        try:
+            from src.agents.idea_stock import maybe_refill_idea_stock
+
+            out["steps"]["harvest"] = maybe_refill_idea_stock(
+                queue=queue, store=store, ledger=ledger
+            )
+        except Exception as exc:  # noqa: BLE001
+            out["steps"]["harvest"] = {"error": str(exc)}
+    else:
+        out["steps"]["harvest"] = {
+            "skipped": True,
+            "queued_policy_ok": sum(
+                1
+                for r in queue.list_rows()
+                if (r.status or "queued") == "queued" and r.policy_ok
+            ),
+            "min_queued_titles": min_queued_titles,
+        }
+
+    # 4) Pick human-approved titles; spawn detached production farm when do_farm
+    try:
+        out["steps"]["pick"] = pick_and_enqueue(
+            limit=max_picks,
+            enqueue_pipeline=do_farm,
+            max_concurrent=max_c,
+        )
+    except Exception as exc:  # noqa: BLE001
+        out["steps"]["pick"] = {"error": str(exc)}
+
+    # 5) Arm publishAt for private jobs that already have public_approved + video_id
+    sched = ScheduleAgent(store, ledger, queue)
+    armed: list[dict[str, Any]] = []
+    for job in store.list_jobs(status="private"):
+        meta = job.meta or {}
+        row = queue.find_by_job_id(job.id)
+        public_ok = bool(meta.get("public_approved")) or (
+            row.public_approved if row else False
+        )
+        if not public_ok or not job.video_id:
+            continue
+        try:
+            armed.append(
+                sched.assign_slot_for_job(
+                    job_id=job.id,
+                    video_id=job.video_id,
+                    public_approved=True,
+                    apply_youtube=True,
+                )
+            )
+        except Exception as exc:  # noqa: BLE001
+            armed.append({"job_id": job.id, "error": str(exc)})
+    out["steps"]["schedule_arm"] = armed
+    out["steps"]["schedule_status"] = sched.status()
+    out["steps"]["budget"] = CostGuardian(store, ledger).check_can_start_job()[1]
+
+    ledger.write(
+        agent="sleep_factory",
+        problem="beat complete",
+        action="policy+watchdog+farm+competitors?/harvest?/pick+schedule",
+        severity="info",
+        extra={"summary": {k: _short(v) for k, v in out["steps"].items()}},
+    )
+
+    # 6) One batch digest email (not per video / per ledger warn). Safe no-op when
+    # no new private/failed or farms still inflight (unless > digest_max_hours).
+    digest_cfg = beat_cfg.get("email_digest")
+    if digest_cfg is False:
+        out["steps"]["email_digest"] = {"skipped": True, "reason": "disabled in config"}
+    else:
+        try:
+            max_h = float(
+                beat_cfg.get("digest_max_hours")
+                if beat_cfg.get("digest_max_hours") is not None
+                else 6
+            )
+            out["steps"]["email_digest"] = ledger.maybe_send_digest(max_hours=max_h)
+        except Exception as exc:  # noqa: BLE001
+            out["steps"]["email_digest"] = {"ok": False, "error": str(exc)}
+            logger.warning("email digest step failed safely: %s", exc)
+
+    log_path = ROOT / "output" / "ops" / "sleep_factory_last.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def install_crontab_hint() -> str:
+    root = str(ROOT)
+    return (
+        f"*/15 * * * * cd {root} && {root}/.venv/bin/python -m src.cli.sleep_factory beat "
+        f">> {root}/output/ops/sleep_factory.log 2>&1\n"
+        f"0 3 * * 1 cd {root} && {root}/.venv/bin/python -m src.cli.run_agents policy-refresh "
+        f">> {root}/output/ops/sleep_factory.log 2>&1\n"
+        f"15 3 * * 1 cd {root} && {root}/.venv/bin/python -m src.cli.run_agents competitors-refresh --force "
+        f">> {root}/output/ops/sleep_factory.log 2>&1\n"
+    )
+
+
+def install_crontab() -> Path:
+    """Append sleep-beat lines to user crontab without wiping unrelated entries."""
+    hint_lines = [ln for ln in install_crontab_hint().splitlines() if ln.strip()]
+    markers = (
+        "src.cli.sleep_factory beat",
+        "src.cli.run_agents policy-refresh",
+        "src.cli.run_agents competitors-refresh",
+    )
+
+    import subprocess
+
+    existing = ""
+    try:
+        proc = subprocess.run(
+            ["crontab", "-l"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0:
+            existing = proc.stdout or ""
+        elif "no crontab" not in (proc.stderr or "").lower():
+            raise RuntimeError(proc.stderr or "crontab -l failed")
+    except FileNotFoundError as exc:
+        raise RuntimeError("crontab binary not available") from exc
+
+    kept = [
+        ln
+        for ln in existing.splitlines()
+        if not any(m in ln for m in markers)
+    ]
+    # Drop trailing blanks before append
+    while kept and not kept[-1].strip():
+        kept.pop()
+    new_lines = kept + ([""] if kept else []) + hint_lines + [""]
+    payload = "\n".join(new_lines)
+    proc = subprocess.run(
+        ["crontab", "-"],
+        input=payload,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr or "crontab install failed")
+    out_path = ROOT / "output" / "ops" / "crontab_sleep_factory.txt"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(payload, encoding="utf-8")
+    return out_path
+
+
+def _short(v: Any) -> Any:
+    if isinstance(v, list):
+        return {"count": len(v)}
+    if isinstance(v, dict) and "error" in v:
+        return {"error": str(v["error"])[:120]}
+    return v if not isinstance(v, dict) else {k: v[k] for k in list(v)[:6]}
+
+
+def _agents_cfg() -> dict[str, Any]:
+    path = CONFIG_DIR / "agents_settings.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))

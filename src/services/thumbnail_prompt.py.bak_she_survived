@@ -1,0 +1,461 @@
+"""Thumbnail prompt generation — rule-based template fill with OpenRouter fallback."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+
+from src.domain.models import ScriptResult
+from src.services.character_bible import CharacterLock, load_character_bible, match_characters
+from src.services.openrouter import OpenRouterClient, OpenRouterError
+from src.services.settings import PROMPTS_DIR, ROOT, Settings, get_settings
+
+ThumbnailPromptMode = Literal["rules", "openrouter", "auto"]
+
+_PLACEHOLDER = re.compile(r"\[([^\]]+)\]")
+
+# Generic fallbacks — low-confidence signals when rules cannot specialize.
+_GENERIC_FIGURE = "a notable historical figure"
+_GENERIC_EXPRESSION = "intense and commanding"
+_GENERIC_BACKGROUND = "dim historical chamber with dramatic shadows"
+_GENERIC_MYSTERY = "aged parchment with a broken wax seal"
+
+# Era / keyword tables
+_ERA_BACKGROUNDS: list[tuple[tuple[str, ...], str]] = [
+    (("tudor", "henry", "anne boleyn", "elizabeth", "english reformation"), "candlelit Tudor palace chamber"),
+    (("roman", "caesar", "empire", "legion"), "marble forum at dusk with torchlight"),
+    (("medieval", "castle", "knight", "crusade"), "torchlit medieval castle hall"),
+    (("napoleon", "revolution", "paris", "18th century"), "candlelit French salon with gilt mirrors"),
+    (("viking", "norse", "longship"), "misty fjord hall with firelight"),
+    (("egypt", "pharaoh", "nile"), "torchlit stone temple chamber"),
+]
+
+_EXPRESSION_RULES: list[tuple[tuple[str, ...], str]] = [
+    (("surviv", "outliv", "never execut", "escaped", "spared"), "defiant and haunted"),
+    (("execut", "behead", "died", "death", "fallen"), "tragic and defiant"),
+    (("poison", "plot", "betray", "conspir", "assassin"), "wary and haunted"),
+    (("war", "battle", "siege", "invasion"), "fierce and resolute"),
+    (("what if", "alternate", "counterfactual"), "defiant and haunted"),
+]
+
+_MYSTERY_RULES: list[tuple[tuple[str, ...], str]] = [
+    (("execut", "warrant", "behead", "tower"), "sealed / cracked wax EXECUTION WARRANT"),
+    (("poison", "toxin", "fever", "physician"), "sealed vial beside a physician's hidden journal"),
+    (("letter", "document", "journal", "diary"), "sealed royal letter with a broken wax seal"),
+    (("crown", "succession", "heir", "throne"), "golden crown resting on a blood-stained cushion"),
+    (("sword", "blade", "war", "battle"), "blood-stained sword half-hidden in shadow"),
+    (("marriage", "wedding", "betrothal"), "torn marriage contract with a wax seal"),
+]
+
+_FIGURE_DESCRIPTORS: dict[str, str] = {
+    "anne_boleyn": "Tudor queen, French hood, pearl headdress, dark elegant gown",
+    "henry_viii": "Tudor king, short beard, jeweled flat cap, forest-green velvet doublet",
+    "cromwell": "Tudor statesman, dark practical doublet, calculating gaze",
+    "cardinal_cleric": "senior cleric, red zucchetto, black cassock with red piping",
+    "tudor_guard": "Tudor royal guard in polished armor",
+    "tudor_noble": "Tudor noble in rich velvet and gold embroidery",
+}
+
+
+class ThumbnailPromptError(RuntimeError):
+    pass
+
+
+@dataclass
+class ThumbnailSlots:
+    historical_figure: str
+    figure_descriptor: str
+    expression: str
+    position: str  # LEFT | RIGHT
+    text_side: str  # RIGHT | LEFT
+    background: str
+    mystery_object: str
+    gold_text: str  # full Text Placement line
+    confidence: float = 0.0
+    matched_character_id: str | None = None
+    slot_confidence: dict[str, float] = field(default_factory=dict)
+
+    def is_sufficient(self, *, min_confidence: float = 0.62) -> bool:
+        if self.confidence < min_confidence:
+            return False
+        if self.historical_figure.lower() in {
+            _GENERIC_FIGURE.lower(),
+            "historical figure",
+            "unknown figure",
+        }:
+            return False
+        generic_hits = sum(
+            1
+            for val in (
+                self.expression,
+                self.background,
+                self.mystery_object,
+            )
+            if val.lower()
+            in {
+                _GENERIC_EXPRESSION.lower(),
+                _GENERIC_BACKGROUND.lower(),
+                _GENERIC_MYSTERY.lower(),
+            }
+        )
+        return generic_hits <= 1
+
+
+@dataclass
+class ThumbnailPromptResult:
+    prompt: str
+    mode: str  # rules | openrouter
+    slots: ThumbnailSlots | None = None
+
+
+def build_thumbnail_prompt(
+    script: ScriptResult,
+    *,
+    seed_title: str | None = None,
+    mode: ThumbnailPromptMode = "auto",
+    settings: Settings | None = None,
+    template_path: Path | None = None,
+) -> ThumbnailPromptResult:
+    """Build a filled thumbnail prompt from script data (rules first, OpenRouter fallback)."""
+    s = settings or get_settings()
+    template = _load_template(template_path)
+    corpus = _script_corpus(script, seed_title=seed_title)
+
+    if mode == "openrouter":
+        prompt = _openrouter_thumbnail_prompt(
+            script, template=template, seed_title=seed_title, settings=s
+        )
+        return ThumbnailPromptResult(prompt=prompt, mode="openrouter")
+
+    slots = _derive_slots_rule_based(script, corpus)
+    if mode == "rules" or (mode == "auto" and slots.is_sufficient()):
+        prompt = _fill_template(template, slots)
+        return ThumbnailPromptResult(prompt=prompt, mode="rules", slots=slots)
+
+    if mode == "auto":
+        try:
+            prompt = _openrouter_thumbnail_prompt(
+                script, template=template, seed_title=seed_title, settings=s
+            )
+            return ThumbnailPromptResult(prompt=prompt, mode="openrouter", slots=slots)
+        except OpenRouterError:
+            # Last resort: return best-effort rules output
+            prompt = _fill_template(template, slots)
+            return ThumbnailPromptResult(prompt=prompt, mode="rules", slots=slots)
+
+    prompt = _fill_template(template, slots)
+    return ThumbnailPromptResult(prompt=prompt, mode="rules", slots=slots)
+
+
+def write_thumbnail_prompt(
+    script: ScriptResult,
+    out_path: Path | str,
+    *,
+    seed_title: str | None = None,
+    mode: ThumbnailPromptMode = "auto",
+    settings: Settings | None = None,
+) -> ThumbnailPromptResult:
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    result = build_thumbnail_prompt(
+        script, seed_title=seed_title, mode=mode, settings=settings
+    )
+    out_path.write_text(result.prompt.strip() + "\n", encoding="utf-8")
+    return result
+
+
+def _load_template(template_path: Path | None) -> str:
+    if template_path is not None:
+        return template_path.read_text(encoding="utf-8").strip()
+    path = PROMPTS_DIR / "thumbnail_template.txt"
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+    raise ThumbnailPromptError(f"Thumbnail template missing: {path}")
+
+
+def _script_corpus(script: ScriptResult, *, seed_title: str | None) -> str:
+    parts = [
+        script.topic,
+        script.title,
+        seed_title or "",
+        script.hook,
+        script.outline.title,
+        script.outline.hook,
+        script.outline.closer,
+    ]
+    for ch in script.outline.chapters:
+        parts.append(ch.title)
+        parts.append(ch.goal)
+        parts.extend(ch.key_points)
+    if script.scenes:
+        parts.append(script.scenes[0].text)
+        parts.append(script.scenes[0].visual_prompt)
+    return " ".join(p for p in parts if p).lower()
+
+
+def _derive_slots_rule_based(script: ScriptResult, corpus: str) -> ThumbnailSlots:
+    bible_path = Path(get_settings().character_bible_path)
+    if not bible_path.is_absolute():
+        bible_path = ROOT / bible_path
+
+    _, bible, _ = load_character_bible(bible_path)
+    match = match_characters(corpus, bible=bible)
+
+    figure, figure_desc, figure_conf, char_id = _pick_figure(script, corpus, match.characters)
+    expression, expr_conf = _pick_expression(corpus)
+    background, bg_conf = _pick_background(corpus)
+    mystery, mystery_conf = _pick_mystery_object(corpus, script)
+    gold_text, gold_conf = _pick_gold_text(script, corpus, char_id)
+    position, text_side = _pick_position(script.topic or script.title)
+
+    slot_conf = {
+        "figure": figure_conf,
+        "expression": expr_conf,
+        "background": bg_conf,
+        "mystery_object": mystery_conf,
+        "gold_text": gold_conf,
+    }
+    confidence = sum(slot_conf.values()) / len(slot_conf)
+
+    return ThumbnailSlots(
+        historical_figure=figure,
+        figure_descriptor=figure_desc,
+        expression=expression,
+        position=position,
+        text_side=text_side,
+        background=background,
+        mystery_object=mystery,
+        gold_text=gold_text,
+        confidence=confidence,
+        matched_character_id=char_id,
+        slot_confidence=slot_conf,
+    )
+
+
+def _pick_figure(
+    script: ScriptResult,
+    corpus: str,
+    characters: list[CharacterLock],
+) -> tuple[str, str, float, str | None]:
+    if characters:
+        title_topic = f"{script.title} {script.topic}".lower()
+        scored: list[tuple[int, int, CharacterLock]] = []
+        for ch in characters:
+            mention = 0
+            earliest = 9999
+            for alias in ch.aliases:
+                pos = title_topic.find(alias)
+                if pos >= 0:
+                    mention += len(alias)
+                    earliest = min(earliest, pos)
+            scored.append((mention * 100 - earliest, ch.priority, ch))
+        scored.sort(key=lambda x: (-x[0], -x[1]))
+        primary = scored[0][2]
+        desc = _FIGURE_DESCRIPTORS.get(
+            primary.id,
+            _short_descriptor(primary.lock),
+        )
+        conf = 0.92 if scored[0][0] > 0 else 0.80
+        return primary.display_name, desc, conf, primary.id
+
+    # Title/topic patterns: "What If Anne Boleyn Outlived..."
+    for text in (script.title, script.topic):
+        m = re.search(
+            r"what if\s+(.+?)(?:\s+(?:had|never|outliv|surviv|did|was|were)\b|$)",
+            text,
+            re.IGNORECASE,
+        )
+        if m:
+            name = _title_case_name(m.group(1).strip(" ?."))
+            if len(name.split()) <= 5:
+                return name, _descriptor_for_name(name, corpus), 0.78, None
+
+    # Proper-name scan (two+ capitalized words)
+    for text in (script.title, script.topic, script.hook):
+        m = re.search(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b",
+            text or "",
+        )
+        if m:
+            name = m.group(1).strip()
+            if name.lower() not in {"what if", "the hook"}:
+                return name, _descriptor_for_name(name, corpus), 0.68, None
+
+    return _GENERIC_FIGURE, "historically accurate attire", 0.25, None
+
+
+def _short_descriptor(lock: str) -> str:
+    """First clause of character lock for thumbnail descriptor."""
+    clause = lock.split(",")[0].strip()
+    if clause.lower().startswith("same recurring "):
+        clause = clause[len("same recurring ") :]
+    return clause[:120]
+
+
+def _descriptor_for_name(name: str, corpus: str) -> str:
+    lower = name.lower()
+    if "boleyn" in lower or "anne" in lower:
+        return _FIGURE_DESCRIPTORS["anne_boleyn"]
+    if "henry" in lower:
+        return _FIGURE_DESCRIPTORS["henry_viii"]
+    if "cromwell" in lower:
+        return _FIGURE_DESCRIPTORS["cromwell"]
+    if any(k in corpus for k in ("tudor", "queen", "king")):
+        return "period-accurate royal attire with rich fabrics"
+    return "historically accurate clothing and presence"
+
+
+def _pick_expression(corpus: str) -> tuple[str, float]:
+    for keywords, expr in _EXPRESSION_RULES:
+        if any(k in corpus for k in keywords):
+            return expr, 0.85
+    return _GENERIC_EXPRESSION, 0.35
+
+
+def _pick_background(corpus: str) -> tuple[str, float]:
+    for keywords, bg in _ERA_BACKGROUNDS:
+        if any(k in corpus for k in keywords):
+            return bg, 0.82
+    return _GENERIC_BACKGROUND, 0.30
+
+
+def _pick_mystery_object(corpus: str, script: ScriptResult) -> tuple[str, float]:
+    for keywords, obj in _MYSTERY_RULES:
+        if any(k in corpus for k in keywords):
+            return obj, 0.84
+    hook = (script.hook or "").lower()
+    if hook:
+        return "a revealing historical artifact tied to the hook", 0.45
+    return _GENERIC_MYSTERY, 0.28
+
+
+def _pick_gold_text(
+    script: ScriptResult,
+    corpus: str,
+    char_id: str | None,
+) -> tuple[str, float]:
+    if any(k in corpus for k in ("surviv", "outliv", "never execut", "spared")):
+        if char_id == "anne_boleyn" or "anne" in corpus:
+            return "2 words in large bold gold serif: SHE SURVIVED", 0.90
+        return "2 words in large bold gold serif: SHE SURVIVED", 0.82
+
+    if "never execut" in corpus or "never killed" in corpus:
+        return "3 words in large bold gold serif: NEVER EXECUTED", 0.85
+
+    # Extract punchy phrase from title after "What If"
+    title = script.title or script.topic or ""
+    m = re.search(r"what if\s+(.+?)\?", title, re.IGNORECASE)
+    if m:
+        phrase = _punchy_phrase(m.group(1))
+        if phrase:
+            words = phrase.split()
+            n = len(words)
+            label = f"{n} words" if n != 2 else "2 words"
+            return f"{label} in large bold gold serif: {phrase}", 0.72
+
+    # Fallback from topic keywords
+    if any(k in corpus for k in ("plot", "conspir", "betray")):
+        return "3 words in large bold gold serif: THE PLOT FAILED", 0.55
+    if any(k in corpus for k in ("alternate", "counterfactual", "timeline")):
+        return "2 words in large bold gold serif: HISTORY CHANGED", 0.50
+
+    return "2 words in large bold gold serif: WHAT IF", 0.30
+
+
+def _punchy_phrase(text: str) -> str | None:
+    """Reduce a what-if clause to 2–4 uppercase words."""
+    text = re.sub(r"\b(had|has|have|never|not|the|a|an|of|in|on|at|to|for|and|or)\b", " ", text, flags=re.I)
+    words = [w for w in re.findall(r"[A-Za-z]+", text) if len(w) > 2]
+    if not words:
+        return None
+    take = words[-4:] if len(words) >= 4 else words[-2:]
+    phrase = " ".join(take[:4]).upper()
+    if len(phrase.split()) < 2:
+        return None
+    return phrase
+
+
+def _pick_position(seed: str) -> tuple[str, str]:
+    # Stable pseudo-random: most thumbnails put figure LEFT, text RIGHT
+    h = sum(ord(c) for c in (seed or "x"))
+    if h % 5 == 0:
+        return "RIGHT", "LEFT"
+    return "LEFT", "RIGHT"
+
+
+def _title_case_name(raw: str) -> str:
+    raw = re.sub(r"\s+", " ", raw.strip())
+    return " ".join(w.capitalize() for w in raw.split())
+
+
+def _fill_template(template: str, slots: ThumbnailSlots) -> str:
+    mapping = {
+        "HISTORICAL FIGURE": slots.historical_figure,
+        "FIGURE_DESCRIPTOR": slots.figure_descriptor,
+        "EXPRESSION": slots.expression,
+        "FIGURE_SIDE": slots.position,
+        "TEXT_SIDE": slots.text_side,
+        "BACKGROUND": slots.background,
+        "MYSTERY OBJECT": slots.mystery_object,
+        "GOLD_TEXT_LINE": slots.gold_text,
+    }
+
+    def repl(match: re.Match[str]) -> str:
+        key = match.group(1).strip()
+        if key in mapping:
+            return mapping[key]
+        # Partial keys like "LEFT / RIGHT" already handled; try direct
+        for k, v in mapping.items():
+            if k == key:
+                return v
+        return match.group(0)
+
+    return _PLACEHOLDER.sub(repl, template)
+
+
+def _openrouter_thumbnail_prompt(
+    script: ScriptResult,
+    *,
+    template: str,
+    seed_title: str | None,
+    settings: Settings,
+) -> str:
+    client = OpenRouterClient(settings)
+    chapters = "\n".join(
+        f"- {ch.title}: {ch.goal}" for ch in script.outline.chapters[:12]
+    )
+    user = f"""Fill this YouTube thumbnail prompt template for a historical what-if documentary.
+
+Return ONLY the complete filled prompt text — no JSON, no markdown fences, no commentary.
+Replace every bracket placeholder with vivid, historically grounded, click-worthy choices.
+Include 2–4 words of gold thumbnail text (uppercase) in the Text Placement section.
+
+Seed title (high CTR reference): {seed_title or script.title}
+
+Script context:
+Topic: {script.topic}
+Title: {script.title}
+Hook: {script.hook}
+Chapters:
+{chapters}
+
+TEMPLATE TO FILL:
+{template}
+"""
+    system = (
+        "You are a YouTube thumbnail art director for historical alternate-history documentaries. "
+        "Audience: history nerds and what-if lovers. Maximize curiosity and emotional tension. "
+        "Output the fully filled template only."
+    )
+    text = client.chat_text(
+        system=system,
+        user=user,
+        temperature=0.75,
+        reasoning_enabled=True,
+    )
+    text = text.strip()
+    if len(text) < 200:
+        raise OpenRouterError(f"OpenRouter thumbnail prompt too short: {text[:200]!r}")
+    return text

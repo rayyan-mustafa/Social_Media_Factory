@@ -1,0 +1,45 @@
+# =============================================================================
+# ART MYSTERIES VAULT — OUTLINE (generate)
+# Channel key: art_mysteries
+# Staged Wave skin — shared farm dual-pacing; RMagine Wiki+Met visuals.
+# Placeholders in {{DOUBLE_BRACES}} are filled at runtime.
+# =============================================================================
+
+Create a detailed {{CHAPTERS_TARGET}}-chapter outline for a
+longform mystery documentary (20–45 min) for YouTube channel **Art Mysteries Vault** about: {{TOPIC}}
+
+Optional niche / angle notes: {{NICHE_NOTES}}
+
+Brand voice: museum mystery documentary — forged canvases, stolen masterpieces, artist rivalries
+
+STRATEGY BLOCKS (obey all three):
+- ACCURACY: Prefer primary sources and clear fact vs legend. Flag contested claims.
+- SPECULATION: Label inference explicitly; acknowledge silences in the record.
+- SAFETY: Formal documentary tone. No graphic gore, sexual content, or profanity.
+  Advertiser-friendly / green-dollar safe for YouTube.
+
+
+
+
+
+
+Target Length & Dual Pacing:
+- Target runtime ~{{TARGET_DURATION_MIN}} minutes (~{{VOICE_WPM}} WPM).
+- Prefer exactly {{CHAPTERS_TARGET}} chapters.
+- Total scene/beat target ~{{TARGET_SCENES}} (band {{MIN_SCENES}}–{{MAX_SCENES}}).
+
+First minutes mandate (Hook / chapter 1) — TITLE PROMISE:
+- Chapter 1 must open on the title claim immediately.
+- First 5–10s: listener feels this is the video the title sold.
+- JSON "hook" field = one-sentence title-promise.
+
+Retention arc:
+- Each chapter ends with an open loop; next chapter pays it off.
+- Anti-recap: never re-establish facts already covered.
+
+
+DUAL PACING (shared factory):
+- Phase A — first ~{{PHASE_A_MAX_WORDS}} words: short gallery beats.
+- Phase B — remaining: longer documentary beats.
+
+Return valid JSON outline only (factory schema).

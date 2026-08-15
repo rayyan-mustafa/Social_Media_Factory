@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Assistant — Portfolio Demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f4f2ee;
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .app { width: 100%; max-width: 460px; }
+  .header {
+    background: #1a1a2e;
+    color: white;
+    padding: 18px 20px;
+    border-radius: 16px 16px 0 0;
+  }
+  .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .header p { margin: 4px 0 0; font-size: 13px; opacity: 0.8; }
+  .chat-window {
+    background: white;
+    height: 480px;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 1px solid #e5e2da;
+    border-right: 1px solid #e5e2da;
+  }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+  .msg.bot { background: #f0efe9; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.user { background: #1a1a2e; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.typing { background: #f0efe9; align-self: flex-start; color: #999; font-style: italic; }
+  .quick-replies { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .quick-reply-btn {
+    border: 1px solid #d8d5cc; background: white; border-radius: 14px;
+    padding: 6px 12px; font-size: 12.5px; cursor: pointer; color: #333;
+  }
+  .quick-reply-btn:hover { background: #f0efe9; }
+  .input-bar {
+    background: white; border-radius: 0 0 16px 16px; border: 1px solid #e5e2da;
+    border-top: none; padding: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .input-bar input[type=text] {
+    flex: 1; border: 1px solid #ddd9cf; border-radius: 20px; padding: 10px 16px;
+    font-size: 14px; outline: none;
+  }
+  .input-bar input[type=text]:focus { border-color: #1a1a2e; }
+  button.send-btn {
+    border: none; background: #1a1a2e; color: white; width: 40px; height: 40px;
+    border-radius: 50%; cursor: pointer; flex-shrink: 0; font-size: 16px;
+  }
+  .lead-banner {
+    background: #e8f5ee; border: 1px solid #a8d8c0; border-radius: 10px;
+    padding: 10px 14px; font-size: 12.5px; color: #14532d; margin-top: 10px;
+  }
+  .config-note { font-size: 12px; color: #999; text-align: center; margin-top: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div style="background:#5c3d2e;color:#f4e8d8;font-size:12px;text-align:center;padding:8px 12px;border-radius:12px 12px 0 0;">
+    SAMPLE sales bot — portfolio closer. Not live client reviews. Seeking first partners.
+  </div>
+  <div class="header">
+    <h1 id="agency-name">Loading...</h1>
+    <p>Ask me anything — pricing, how it works, why us</p>
+  </div>
+  <div class="chat-window" id="chat-window"></div>
+  <div id="quick-replies-container"></div>
+  <div class="input-bar">
+    <input type="text" id="text-input" placeholder="Type your question, in any language..." />
+    <button class="send-btn" id="send-btn">➤</button>
+  </div>
+  <div class="config-note">
+    Sales assistant demo — edit AGENCY_CONFIG below to update pricing,<br>
+    competitor comparisons, or positioning at any time.
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   AGENCY CONFIG — edit this to update your own pitch, pricing,
+   and competitor comparisons. This bot sells YOUR agency's
+   service to visiting prospects, not a specific client's business.
+   ============================================================ */
+const AGENCY_CONFIG = {
+  agencyName: "Rayyan AI Front Desk",
+  founderName: "Rayyan",
+  offer: "A custom AI website + 24/7 booking chatbot for home services and local shops — built and personally maintained, not a generic template you configure alone.",
+  tiers: [
+    { name: "Basic", price: "€250 setup + €25/mo", includes: "One-page branded website, AI chatbot on web widget, booking capture to a shared sheet, monthly knowledge base refresh." },
+    { name: "Standard", price: "€450 setup + €45/mo", includes: "Everything in Basic, plus WhatsApp channel when verified, missed-call text-back, appointment reminders." },
+    { name: "Premium", price: "€800 setup + €75/mo", includes: "Everything in Standard, plus AI voice receptionist (phone), calendar sync, priority support — only after Tier 1 is proven." }
+  ],
+  whyUsPoints: [
+    "We lead with a working SAMPLE demo, then build yours — you see the product before you pay.",
+    "Built for trades first: HVAC, plumbing, electrical, auto — missed calls and after-hours jobs.",
+    "Bot is read-only by default; a human confirms real bookings unless you ask for full automation later.",
+    "Month to month — no lock-in. Monthly knowledge review included so it does not go stale."
+  ],
+  competitorNotes: [
+    "Large SaaS platforms often leave you to configure the bot yourself with no ongoing human review — we personally refresh your bot monthly.",
+    "Some platforms add per-conversation overage fees — our pricing is flat.",
+    "Voice/phone AI is usually enterprise-gated elsewhere — we offer it only at Premium after web chat is working.",
+    "Self-serve dashboards leave you in a ticket queue when something reads wrong — you get a direct line to the person who built it."
+  ],
+  contactMethod: "WhatsApp or email — collect this from the visitor if they show buying interest"
+};
+/* ============================================================
+   END CONFIG
+   ============================================================ */
+
+// Auto-detect proxy endpoint:
+//   - Production (Vercel/deployed): POST /api/chat  → api/chat.py serverless function
+//   - Local dev: POST http://127.0.0.1:8787/v1/messages  → scripts/demo_chat_proxy.py
+const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+  ? "http://127.0.0.1:8787/v1/messages"
+  : "/api/chat";
+
+document.getElementById('agency-name').textContent = AGENCY_CONFIG.agencyName;
+
+function buildSystemPrompt(cfg) {
+  const tiersList = cfg.tiers.map(t => `- ${t.name}: ${t.price}\n  Includes: ${t.includes}`).join('\n');
+  const whyUsList = cfg.whyUsPoints.map(p => `- ${p}`).join('\n');
+  const competitorList = cfg.competitorNotes.map(p => `- ${p}`).join('\n');
+
+  return `You are a warm, sharp sales assistant for ${cfg.agencyName}, a small agency run by ${cfg.founderName} that builds AI websites + booking chatbots for local service businesses (salons, clinics, home services, etc.) in the US and Europe.
+
+YOUR JOB: convince the visitor (a small business owner) that this is worth buying, handle their objections honestly, and move them toward sharing contact info so a real conversation can start. You are persuasive but never pushy, dishonest, or high-pressure. Never invent facts, prices, or claims not listed below.
+
+CRITICAL LANGUAGE RULE: Always reply in the SAME language the visitor writes in. If they write in Spanish, reply fully in Spanish. If German, reply in German. Detect automatically from their message — do not ask what language to use, just match it naturally. Keep this same warmth and persuasive tone in every language.
+
+THE OFFER:
+${cfg.offer}
+
+PRICING TIERS:
+${tiersList}
+
+WHY CHOOSE US (use these naturally in conversation, not as a dumped list):
+${whyUsList}
+
+HOW WE COMPARE TO COMPETITORS (use ONLY if the visitor asks about alternatives, other tools, or seems to be comparing options — never bring this up unprompted, and never name specific competitor companies by name, just describe the category):
+${competitorList}
+
+CONVERSATION STYLE:
+- Ask questions to understand their business before pitching (what kind of business, what problem they're facing — missed calls, no online booking, etc.)
+- Keep replies short and conversational (2-4 sentences), like a real chat, not a sales page dumped into text
+- If they show genuine interest (asking about pricing, next steps, or how to start), ask for their name and best way to reach them (${cfg.contactMethod}) so ${cfg.founderName} can follow up directly with a live demo built for their actual business. When you've captured their contact info, end your reply with the token LEAD_CAPTURED on its own line (the visitor will never see this, it's for internal tracking only).
+- If they push back on price, don't get defensive — acknowledge it plainly and reframe around the cost of what they're currently losing (missed calls, missed bookings) rather than just repeating the price.
+- If they ask something outside scope (unrelated topics), gently redirect back to how you can help their business.
+- Never claim results, client counts, or guarantees that aren't explicitly given to you above.`;
+}
+
+const SYSTEM_PROMPT = buildSystemPrompt(AGENCY_CONFIG);
+let conversationHistory = [];
+
+const chatWindow = document.getElementById('chat-window');
+const textInput = document.getElementById('text-input');
+const sendBtn = document.getElementById('send-btn');
+const quickRepliesContainer = document.getElementById('quick-replies-container');
+
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + sender;
+  div.textContent = text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  return div;
+}
+
+function addLeadBanner(text) {
+  const div = document.createElement('div');
+  div.className = 'lead-banner';
+  div.textContent = '✓ New lead captured — ' + text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function showQuickReplies(options) {
+  quickRepliesContainer.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'quick-replies';
+  wrap.style.margin = '8px 0';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-reply-btn';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      quickRepliesContainer.innerHTML = '';
+      addMessage(opt, 'user');
+      sendToClaude(opt);
+    };
+    wrap.appendChild(btn);
+  });
+  quickRepliesContainer.appendChild(wrap);
+}
+
+// greet on load
+addMessage(`Hi! I help small businesses set up AI websites and booking chatbots so they stop losing customers to missed calls and slow replies. What kind of business do you run?`, 'bot');
+showQuickReplies(["Salon / beauty", "Home services", "Clinic / medical", "Something else"]);
+
+async function sendToClaude(userText) {
+  conversationHistory.push({ role: "user", content: userText });
+  const typingEl = addMessage('typing...', 'typing');
+
+  try {
+    const response = await fetch(API_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 350,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    typingEl.remove();
+
+    if (!response.ok || data.error) {
+      addMessage("Demo proxy error — start scripts/demo_chat_proxy.py. " + (data.error || response.status), 'bot');
+      return;
+    }
+
+    let reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+    if (!reply) {
+      addMessage("Empty model reply — check proxy / API credits.", 'bot');
+      return;
+    }
+
+    let leadCaptured = false;
+    if (reply.includes("LEAD_CAPTURED")) {
+      leadCaptured = true;
+      reply = reply.replace("LEAD_CAPTURED", "").trim();
+    }
+
+    conversationHistory.push({ role: "assistant", content: reply });
+    addMessage(reply, 'bot');
+    if (leadCaptured) addLeadBanner(userText.slice(0, 60) + (userText.length > 60 ? '...' : ''));
+
+  } catch (err) {
+    typingEl.remove();
+    addMessage("Sorry, something went wrong on my end — feel free to reach out directly instead.", 'bot');
+    console.error("Claude API error:", err);
+  }
+}
+
+function handleSend() {
+  const text = textInput.value.trim();
+  if (!text) return;
+  quickRepliesContainer.innerHTML = '';
+  addMessage(text, 'user');
+  textInput.value = '';
+  sendToClaude(text);
+}
+
+sendBtn.addEventListener('click', handleSend);
+textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+---
+description: Surface subagent shell/Smart Mode/elevated approval requests in the parent chat
+alwaysApply: true
+---
+
+# Subagent approvals in parent chat
+
+Rayyan must never hunt through individual Task subagent UIs for terminal, network, Smart Mode, or elevated-permission approvals. Those prompts belong in **this main parent chat**.
+
+## Parent Auto / coordinator
+
+1. Do **not** leave approval requests buried only in a subagent UI.
+2. When a worker needs Shell / network / `all` / Smart Mode approval, **prompt Rayyan in the main chat** with the exact command (or MCP call), why it is needed, and what approval to grant.
+3. Prefer designing work so critical approvals happen via **parent-visible** Shell or MCP calls when possible (run gated commands yourself, or resume the worker after Rayyan approves in-thread).
+
+## Task subagents
+
+1. If blocked on approval, **escalate immediately**: report exact command + why + approval type needed so the parent can ask Rayyan in the main thread.
+2. Do not wait silently in the subagent UI for Rayyan to discover the prompt.
+3. Prefer returning clear escalation text over retrying the same gated call in a loop.
+
+## Escalation snippet (use when blocked)
+
+```
+APPROVAL NEEDED (parent chat):
+- Command/call: …
+- Why: …
+- Approval: terminal | network | all | Smart Mode
+```

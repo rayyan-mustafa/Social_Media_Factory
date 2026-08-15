@@ -1,0 +1,30 @@
+# =============================================================================
+# PRIMARY SOURCE READING — outline (Voices of the Past style)
+# RETENTION_PROFILE=primary_source_reading
+# =============================================================================
+
+Create a {{CHAPTERS_TARGET}}-chapter outline for a primary-source reading documentary
+(~{{TARGET_DURATION_MIN}} minutes) about: {{TOPIC}}
+
+Optional notes: {{NICHE_NOTES}}
+
+Format structure (obey):
+1. Calm intro (why this source / letter / chronicle matters tonight)
+2–N. Long quoted source passages (mark chapters as "source_passage") alternating with
+   soft interstitial chapters that contextualize without breaking sleep tone
+Last. Soft coda — mystery left gently open
+
+Hook pattern: soft mystery only (no ticking clock, no execution slam).
+JSON "hook" = quiet curiosity promise tied to the title.
+
+Dual pacing knobs:
+- ~{{TARGET_SCENES}} scenes (band {{MIN_SCENES}}–{{MAX_SCENES}})
+- Phase A first ~{{PHASE_A_MAX_WORDS}} words: short beats
+- Phase B: long quoted readings (~{{PHASE_B_WORDS}} words / ~{{PHASE_B_SECONDS}}s)
+- speaker roles: narrator for interstitial; source_reader / quote_a for quoted blocks
+  (put preference in chapter goal text so expansion can tag speaker)
+
+Accuracy: Prefer real public-domain / clearly attributable historical wording when
+known; if paraphrasing, say so in interstitial — never invent sealed documents.
+
+Return valid outline JSON (title, hook, chapters[]).

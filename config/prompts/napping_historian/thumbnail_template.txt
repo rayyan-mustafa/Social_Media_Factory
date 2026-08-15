@@ -1,0 +1,51 @@
+Create a cinematic 16:9 YouTube thumbnail designed for maximum click-through rate for a forbidden-secrets historical documentary (night-owl mystery, calm dread).
+
+Concept lock — The Secret Document (hero object, not a talking-head portrait)
+Extreme close-up of a weathered period hand holding an aged parchment missive: [MYSTERY OBJECT].
+The document must dominate the frame (about 45–60% of the image) so the seal and parchment read clearly at YouTube mobile thumbnail size.
+Show a dried, dark archival stain on the parchment — aged historical discoloration suggesting old dried blood mixed with ink and candle soot (ad-safe: NOT fresh gore, NOT dripping blood, NOT an execution scene).
+A cracked royal wax seal with embossed crest catches a hard rim of warm candlelight; frayed fibers, foxing, and smoke grit on the paper.
+
+Watcher (secondary only)
+In soft darkness on the [FIGURE_SIDE] third: a shadowed silhouette of [HISTORICAL FIGURE] ([FIGURE_DESCRIPTOR]) watching the document.
+Face mostly obscured — posture and a faint eye glint only. Suggested mood: [EXPRESSION].
+Do not let the figure compete with the parchment; the secret document is the click magnet.
+
+Artistic Style
+Hyper-realistic cinematic still, museum-grade historical detail, subtle Renaissance oil-painting texture (Holbein / Caravaggio chiaroscuro) but photographic clarity for thumbnail CTR.
+Shot language: shallow depth of field, anamorphic-feel bokeh, 35–50mm close-up, Flux/Seedream production still.
+
+Lighting
+Single warm candle / lantern key from camera-left, deep cool shadows, Rembrandt edge on the seal and knuckles, heavy vignette. Moody, nocturnal, documentary mystery.
+
+Background
+[BACKGROUND]. Soft, unfocused, almost black negative space. Dark stone, oak paneling, or candle smoke — never compete with the parchment.
+
+Composition
+Rule of Thirds. Document large and centered-left or center; 35–45% clean dark negative space on the [TEXT_SIDE] for title text.
+
+Text Placement
+[GOLD_TEXT_LINE]
+Gold serif only in that reserved dark zone — sharp, high-contrast, readable at small size. No other captions, no subtitles, no random alphabet soup.
+
+Avoid / negative guidance
+No modern objects, logos, watermarks, UI chrome, phones, or neon.
+No fresh gore, beheading, torture spectacle, or graphic violence.
+No bright flat lighting, no cartoon/anime, no collage grid.
+No gibberish letters or extra burned-in words besides the gold title line above.
+
+Variables used
+• HISTORICAL FIGURE = [HISTORICAL FIGURE]
+• EXPRESSION = [EXPRESSION]
+• LEFT / RIGHT = [FIGURE_SIDE] (text on [TEXT_SIDE])
+• BACKGROUND = [BACKGROUND]
+• MYSTERY OBJECT = [MYSTERY OBJECT]
+
+# === SMM THUMB REDESIGN napping_historian ===
+SMM competitor-vision redesign (History Calling–like mystery):
+- Focal: Secret Document / artifact dominates; map_vs_face=artifact.
+- Watcher face stays secondary silhouette — parchment/seal is the click magnet.
+- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.
+- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.
+- Contrast target≈0.718; keep nocturnal candle key + deep vignette.
+# === END SMM THUMB REDESIGN ===

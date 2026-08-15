@@ -1,0 +1,37 @@
+# config/whatsapp_numbers.yaml
+#
+# Maps each client's WhatsApp number → their client slug.
+# The slug must match the folder name under clients/<slug>/.
+#
+# Twilio Sandbox (testing — no Meta verification needed):
+#   The sandbox uses one shared number: whatsapp:+14155238886
+#   Customers join by sending "join <keyword>" to that number.
+#   Use keyword routing below: map each keyword/test contact separately.
+#
+# Production (Meta-verified number):
+#   Each client gets their own dedicated WhatsApp Business number.
+#
+# Format:
+#   <client-slug>:
+#     numbers:
+#       - "+15551234567"    # E.164 format, no 'whatsapp:' prefix
+#
+# ─────────────────────────────────────────────────────────────────────────
+
+# EXAMPLE: Sandbox test mapping
+# Remove or replace this when real numbers are provisioned.
+example_hvac_client:
+  numbers:
+    - "+14155238886"    # Twilio sandbox number — replace with real number after verification
+
+# EXAMPLE: Production client (uncomment and fill in when ready)
+# peak_heat_air:
+#   numbers:
+#     - "+15125550142"  # Austin HVAC client's dedicated WhatsApp Business number
+
+# ─────────────────────────────────────────────────────────────────────────
+# NOTES:
+# - Only inbound-initiated conversations are handled here.
+# - No outbound / broadcast messaging is allowed.
+# - This file is safe to commit — it contains phone numbers only,
+#   never API keys or auth tokens.

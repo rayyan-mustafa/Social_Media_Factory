@@ -1,0 +1,4 @@
+# Optional refine pass for Court Whispers
+Tighten mystery hooks, remove recap, keep advertiser-safe tone.
+Input outline JSON: {{OUTLINE_JSON}}
+Return refined outline JSON only.

@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "portfolio/**", "use": "@vercel/static" },
+    { "src": "client-chatbot-demo.html", "use": "@vercel/static" },
+    { "src": "sales-chatbot-portfolio.html", "use": "@vercel/static" },
+    { "src": "api/chat.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/chat", "dest": "/api/chat.py" },
+    { "src": "/client-chatbot-demo.html", "dest": "/client-chatbot-demo.html" },
+    { "src": "/sales-chatbot-portfolio.html", "dest": "/sales-chatbot-portfolio.html" },
+    { "src": "/portfolio/(.*)", "dest": "/portfolio/$1" },
+    { "src": "/", "dest": "/portfolio/index.html" }
+  ],
+  "env": {
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "OPENROUTER_API_KEY": "@openrouter_api_key",
+    "DEMO_CHAT_MODEL": "google/gemini-2.5-flash"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "notes": "Region packs for the agency lead-gen hunter. CLI: --region us|eu|gulf --city ...",
+  "regions": {
+    "us": {
+      "label": "United States / Canada",
+      "locale": "en_US",
+      "language": "en",
+      "currency": "USD",
+      "primary_channel": "email",
+      "pricing": {
+        "setup_usd": [1500, 4000],
+        "retainer_usd": [200, 500]
+      },
+      "compliance": {
+        "regime": "can_spam",
+        "rules": [
+          "Physical mailing address in footer",
+          "Unsubscribe line in every email",
+          "How we found you: public Google Business Profile",
+          "Do not buy lists"
+        ]
+      },
+      "quiet_hours_local": [21, 8],
+      "default_city": "Austin, TX",
+      "places_language": "en"
+    },
+    "eu": {
+      "label": "EU / UK",
+      "locale": "en_GB",
+      "language": "en",
+      "currency": "EUR",
+      "primary_channel": "email",
+      "pricing": {
+        "setup_usd": [1500, 4000],
+        "retainer_usd": [200, 500],
+        "notes": "GDPR DPA before any processing beyond public GBP facts"
+      },
+      "compliance": {
+        "regime": "gdpr",
+        "rules": [
+          "No purchased lists",
+          "No scrape-and-spam",
+          "Legitimate interest: B2B public listing + relevant service — keep copy factual",
+          "Soft CTA; offer opt-out",
+          "LinkedIn-careful: no automation on day 1"
+        ]
+      },
+      "quiet_hours_local": [20, 8],
+      "default_city": "Manchester, UK",
+      "places_language": "en"
+    },
+    "gulf": {
+      "label": "GCC / Middle East",
+      "locale": "en_AE",
+      "language": "en",
+      "currency": "USD",
+      "primary_channel": "whatsapp",
+      "pricing": {
+        "setup_usd": [1500, 4000],
+        "retainer_usd": [200, 500]
+      },
+      "compliance": {
+        "regime": "whatsapp_opt_in_careful",
+        "rules": [
+          "WhatsApp template, not a blast list",
+          "No 2am pings (quiet hours)",
+          "Arabic optional later; English first",
+          "How we found you: Google Maps listing"
+        ]
+      },
+      "quiet_hours_local": [21, 9],
+      "default_city": "Dubai, AE",
+      "places_language": "en"
+    }
+  }
+}

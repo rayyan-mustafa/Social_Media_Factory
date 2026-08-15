@@ -1,0 +1,32 @@
+---
+description: Preflight resources before farm; vision = openrouter/free only
+alwaysApply: true
+---
+
+# Farm / vision compliance (Rayyan)
+
+## Before ANY video farm (full / visuals)
+
+1. **Preflight first** — never start Script→TTS→RunPod→compose if required tools are down.
+   - Vision judge must be ready (`openrouter/free` returns parseable JSON).
+   - At least one archival source (Met and/or Wikimedia) must respond.
+   - RunPod stills smoke/capacity gates when `IMAGE_BACKEND=runpod_pod`.
+2. If preflight fails: **stop, report blockers in parent chat, do not grind**.
+3. Code path: `src.services.farm_preflight.farm_resource_preflight` (wired into `spawn_farm_job`).
+
+## Vision model lock
+
+- **ONLY** `openrouter/free` for Wiki/Met vision judge. No paid models. No other free VL ids.
+- Implemented in `src/services/vision_judge.py` (`VISION_MODEL_LOCKED`).
+- Free router may prepend `User Safety: safe|unsafe` — parser strips it and forces a JSON turn. Do not “fix” by switching models.
+- Free pool **rate-limits** (429) under parallel scene workers — keep fetch workers ≤2 and pace vision calls. Do not blast concurrent VL requests.
+
+## Archival policy
+
+- Wiki+Met on **VPS**; Flux on **RunPod only** for reject / empty slots.
+- **No provisional PASS** when vision is down — fail closed → Flux or refuse farm via preflight.
+
+## Short-test / sample farms
+
+- Do not spawn sample farms if vision/preflight is red.
+- If user is unsatisfied with short-test experiments, honor `output/ops/ROLLBACK_BASELINE_PRE_SHORT_TEST.md`.

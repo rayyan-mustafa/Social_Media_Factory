@@ -1,0 +1,12 @@
+# Channel visual style lock — Masterpiece historical cinematic painting
+# Target: detailed Franz-Ferdinand-plate look (faces/costume readable), not silhouettes.
+# Lines starting with # are comments and are stripped.
+
+Masterpiece historical digital painting, cinematic realism, highly detailed,
+museum-quality illustration, classical academic painting combined with modern concept art,
+soft painterly brushstrokes, realistic anatomy, historically accurate clothing and architecture,
+volumetric lighting, atmospheric perspective, subtle dust in the air, elegant composition,
+ultra detailed faces, expressive emotions, premium book illustration, realistic textures,
+painterly finish, sharp focus, epic historical scene, 8k quality,
+faces and clothing clearly lit and readable, no silhouette-only compositions,
+no featureless backlit crowds

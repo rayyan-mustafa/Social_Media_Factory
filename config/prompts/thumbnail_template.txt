@@ -1,0 +1,49 @@
+Create a cinematic 16:9 YouTube thumbnail designed for maximum click-through rate for a historical documentary.
+
+Subject
+Create an ultra-detailed, hyper-realistic Renaissance oil painting portrait of [HISTORICAL FIGURE] ([FIGURE_DESCRIPTOR]).
+The subject must immediately command attention through powerful eye contact, lifelike skin textures, authentic historical clothing, and emotionally expressive facial features while remaining historically accurate.
+
+Expression & Pose
+Expression: [EXPRESSION]
+Position the figure on the [FIGURE_SIDE] third of the frame.
+Body angled slightly away from camera while the face turns toward the viewer to create mystery and tension.
+Keep the shoulders visible for a cinematic bust portrait.
+
+Artistic Style
+Museum-quality 16th-century oil painting inspired by Hans Holbein, Titian, Caravaggio, Anthony van Dyck, Rembrandt.
+
+Lighting
+Classic Rembrandt + Chiaroscuro lighting. Strong directional warm light. Deep cinematic shadows. Moody. Dramatic.
+
+Background
+[BACKGROUND]. Soft, unfocused. Dark vignette. Never compete with the face.
+
+Storytelling Hook
+[MYSTERY OBJECT] near the subject.
+
+Composition
+Rule of Thirds. 40–50% clean dark negative space on the [TEXT_SIDE] for title text.
+
+Text Placement
+[GOLD_TEXT_LINE]
+
+Variables used
+• HISTORICAL FIGURE = [HISTORICAL FIGURE]
+• EXPRESSION = [EXPRESSION]
+• LEFT / RIGHT = [FIGURE_SIDE] (text on [TEXT_SIDE])
+• BACKGROUND = [BACKGROUND]
+• MYSTERY OBJECT = [MYSTERY OBJECT]
+
+# === CEO-SMM AUTO PATCH THUMB_NAPSTORIAN @ 2026-08-10T07:56:33.547312+00:00 ===
+CEO CTR hardening (ctr_red): One dominant face/object, high-contrast focal point, readable 3–5 word promise matching the title. Avoid cluttered collage. Emotion > decoration.
+# === END CEO-SMM PATCH ===
+
+# === SMM THUMB REDESIGN napstorian ===
+SMM competitor-vision redesign (What-If punch):
+- Focal: commanding face — one dominant face OR bold map, never collage grid.
+- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.
+- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.
+- Title promise ≤ 5 words; competitor text density≈0.305.
+- Contrast target≈0.852; Rembrandt key + deep cinematic shadows.
+# === END SMM THUMB REDESIGN ===

@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-10T15:30:00+00:00",
+  "notes": "Wave 3 network revenue layers. Do NOT enable live affiliate/sponsor injection until monetized_channels >= unlock_when_monetized_channels_gte (default 6).",
+  "unlock_when_monetized_channels_gte": 6,
+  "state": {
+    "monetized_channels": ["napstorian", "napping_historian"],
+    "notes": "Mark a channel here only after YPP approval + first ad payout path is real. Placeholder count=2 until more Brand Accounts monetize."
+  },
+  "layers": {
+    "adsense": {
+      "enabled_when_unlocked": true,
+      "priority": 1,
+      "tactics": [
+        "longform_tier1_english",
+        "evergreen_catalog",
+        "q4_cpm_push"
+      ]
+    },
+    "affiliates": {
+      "enabled_when_unlocked": true,
+      "priority": 2,
+      "allowed_channels": ["money_history", "science_history", "business_empires", "art_mysteries"],
+      "products": [
+        {"category": "books", "examples": ["history biographies", "museum catalogs"]},
+        {"category": "courses", "examples": ["art history survey", "finance literacy history framing"]},
+        {"category": "museum_memberships", "examples": ["Met", "British Museum supporter"]},
+        {
+          "category": "finance_tools",
+          "channels_only": ["money_history"],
+          "requires_disclaimer": true,
+          "note": "Tools only — never stock picks; disclaimer required"
+        }
+      ],
+      "forbidden": ["crypto_signals", "get_rich_guarantees", "undisclosed_paid_recs"]
+    },
+    "sponsorships": {
+      "enabled_when_unlocked": true,
+      "priority": 3,
+      "soft_brands": ["audible", "education_apps", "language_learning", "vpn_careful_disclosure"],
+      "forbid": ["payday_loans", "gambling", "weight_loss_miracle", "political_pacs"]
+    },
+    "licensing": {
+      "enabled_when_unlocked": true,
+      "priority": 4,
+      "offer": "white_label_archive_first_farm",
+      "differentiator": "Wiki+Met primary stills with vision gate — not Flux-only spam"
+    },
+    "product": {
+      "enabled_when_unlocked": true,
+      "priority": 5,
+      "ideas": [
+        "pd_motion_clip_packs",
+        "script_prompt_packs",
+        "rmagine_studio_saas_internal_tool"
+      ]
+    },
+    "ma_network": {
+      "enabled_when_unlocked": true,
+      "priority": 6,
+      "note": "Bundle Brand Accounts under holding; sell/raise on cashflow multiples only after 6+ monetized"
+    }
+  },
+  "activation_checklist": [
+    "confirm_monetized_count_gte_6",
+    "per_channel_disclosure_templates",
+    "affiliate_link_utm_ledger",
+    "sponsor_read_slot_in_script_sop",
+    "never_on_kids_or_crypto_signal_channels"
+  ]
+}

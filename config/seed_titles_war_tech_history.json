@@ -1,0 +1,28 @@
+{
+  "channel": "war_tech_history",
+  "brand": "War Machines Archive",
+  "production_enabled": false,
+  "videos_per_month_start": 8,
+  "titles": [
+    "How Roman Logistics Fed a Frontier Army",
+    "The Codebreakers Before Enigma",
+    "Why Longbows Remade Medieval Battlefields",
+    "The Supply Train That Lost a Campaign",
+    "How Naval Gunnery Tables Changed Fleets",
+    "The Telegraph and the Speed of Orders",
+    "Why Fortification Geometry Beat Sheer Walls",
+    "The Convoy System That Starved U-Boats of Easy Prey",
+    "How Siege Engines Were Engineered, Not Mythologized",
+    "The Map Room Decisions Behind a Desert Campaign",
+    "Why Standardized Parts Won an Industrial War",
+    "The Cipher Disk That Traveled in a Diplomat's Coat",
+    "How Rail Gauges Constrained Invasions",
+    "The Observation Balloon and the Artillery Arc",
+    "Why Soft-Skin Trucks Decided a Modern Offensive",
+    "The Harbor Minefields Drawn on Secret Charts",
+    "How Horse Remounts Limited Deep Operations",
+    "The Radar Chain That Saw the Raid Early",
+    "Why Amphibious Logistics Fail More Than Landings",
+    "The Staff Ride Map That Became Doctrine"
+  ]
+}

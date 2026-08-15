@@ -1,0 +1,9 @@
+google_api_key: "${GOOGLE_API_KEY}"  # environment variable placeholder
+use_google_places: false               # if false, Nominatim only
+output_dir: "output/leadgen_test"
+csv_columns: ["business_name","address","phone","score","tags","draft"]
+sync_sheets: false                    # enable via CLI flag
+region_id: "default_region"
+vertical_id: "default_vertical"
+city: "Austin"
+limit: 25

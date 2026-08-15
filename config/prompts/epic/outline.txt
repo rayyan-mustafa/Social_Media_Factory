@@ -1,0 +1,149 @@
+# =============================================================================
+# EPIC OUTLINE PROMPT (~90 min dual pacing)
+# ScriptModule loads this when RETENTION_PROFILE=epic (prompts_dir).
+# Placeholders in {{DOUBLE_BRACES}} are filled at runtime.
+# =============================================================================
+
+Generate a highly detailed, 15-section video outline for a long-form historical
+"What If" documentary (~90 minutes) for this YouTube channel.
+
+Video Topic: {{TOPIC}}
+Optional niche / angle notes: {{NICHE_NOTES}}
+
+Audience Profile:
+- "Speculative Historians" who love deep world-building
+- Tudor / early-modern history enthusiasts
+- Viewers who enjoy long "Boring History for Sleep" style documentaries
+- They value historical accuracy combined with creative "What If" scenarios
+
+Target Length & Dual Pacing (factory knobs — obey these):
+- Target runtime ~{{TARGET_DURATION_MIN}} minutes of narrated content (~{{VOICE_WPM}} WPM measured).
+- Prefer exactly {{CHAPTERS_TARGET}} sections/chapters (use the 15-section structure below).
+- Total scene/beat target ~{{TARGET_SCENES}} (acceptable band {{MIN_SCENES}}–{{MAX_SCENES}}).
+
+First 60 seconds mandate (Hook chapter) — TITLE PROMISE:
+- The outline title is a contract. Chapter 1 goal/key_points MUST open on that
+  claim / What-If / irreversible stake immediately (no throat-clearing).
+- First 5–10s intent: viewer feels "this is exactly the video the title sold"
+  (same entity + same fork + tension) — not clickbait.
+- Open with stakes + mystery + one concrete image locked to the title —
+  not repeated "the year is…" setup.
+- End the hook with an unanswered question that chapter 2 begins to answer;
+  include a pattern-interrupt + curiosity gap + "why this matters tonight"
+  without spoiling the whole answer.
+- JSON "hook" field = one-sentence title-promise (must share title tokens).
+
+Retention arc:
+- Each chapter ends with an open loop; the next chapter pays it off.
+- Anti-recap: never re-establish facts already covered — advance the timeline.
+- Tone: calm but gripping documentary (not sleepy Wikipedia).
+- Mid-arc re-engage (required once): around chapters ~7–10, include ONE calm
+  documentary viewer question before the deepest speculative future —
+  e.g. "So ask yourself…" — not "hey guys" energy.
+  Put that ask in the chapter goal/key_points so expansion can emit beat_type "reengage".
+
+DUAL PACING (critical — epic 90-min):
+- Phase A — first ~{{PHASE_A_MAX_WORDS}} words (~first 10 minutes, SAME as 20-min longform):
+  ~{{PHASE_A_SCENES}} short gallery beats, each ~{{PHASE_A_WORDS_MIN}}–{{PHASE_A_WORDS_MAX}} words
+  and ~{{PHASE_A_SECONDS}} seconds of TTS.
+- Phase B — after ~{{PHASE_A_MAX_WORDS}} words (remaining ~80 minutes):
+  ~{{PHASE_B_SCENES}} long deep-dive beats, each ~{{PHASE_B_WORDS}} words
+  and ~{{PHASE_B_SECONDS}} seconds of calm narration (one long spoken beat = one visual).
+- Early sections should carry most Phase A short beats.
+- Later sections should carry Phase B long 2-minute paragraphs.
+- Put "pacing_phase": "a" or "b" on each chapter. Set target_sentences to the beat count
+  for that phase (short counts in A, long counts in B — NOT the same density).
+
+Outline Structure Requirements (use these exact 15 sections as chapters, in order):
+
+1. The Hook (~first minutes — mostly Phase A):
+   Start with a visceral "moment of change" that IS the title's What-If
+   (divergence point). Use the "Secret Document" or "Hidden Truth" angle —
+   but the first breath must fulfill the title promise, not a generic archive.
+
+2. Historical Context:
+   Establish the real-world timeline before the divergence. Physical realities
+   (illnesses, court politics, specific dates).
+
+3. The World Before the Break:
+   Daily life, institutions, and power balances that make the divergence costly.
+
+4. The Divergence Point:
+   Detail exactly what changes and why — the hinge of the alternate timeline.
+
+5. Immediate Aftermath:
+   How does the Tudor court (or relevant court) react? Key figures, letters, rumors.
+
+6. First Ripples:
+   Local consequences in the weeks and months after the break.
+
+7. The Mid-Term Shift:
+   Broaden to European politics, Church, succession. Seed the mid-arc viewer question.
+
+8. Pattern Interrupt / Deep Dive:
+   One visceral detail — illness, law, medical outcome. Prefer placing the single
+   mid-arc "So ask yourself…" reengage beat near here.
+
+9. Alliances and Enemies:
+   How foreign courts and domestic factions realign.
+
+10. A Generation Later:
+    Fast-forward ~15–25 years. What does Alternate England look like?
+
+11. Institutions Remade:
+    Law, church, navy, education — which pillars hold or crack.
+
+12. Counterfactual Stress Test:
+    Address "But would it actually happen?" Builds trust with history buffs.
+
+13. Distant Echoes:
+    Empire, language, religion, or global role decades further out.
+
+14. The Final Summary:
+    Dramatic summary of the alternate legacy — inevitable feeling.
+
+15. The Community Question:
+    A complex speculative question to spark comments from Speculative Historians.
+
+Tone Guidelines:
+- Documentary-style, serious, and atmospheric.
+- Avoid high-energy YouTube tropes; use "Documentary-Speak."
+- Ensure logical Bridge Statements between sections so the alternate history feels inevitable.
+- Niches that fit: gallery / museum-style history essays, what-if history, myth & folklore,
+  dark-academia explainers.
+- Avoid: news, private-person likeness abuse, spammy clickbait you cannot deliver.
+
+Write an outline only — do NOT write full narration yet.
+
+Return STRICT JSON (no markdown fences) with this shape:
+{
+  "title": "working video title",
+  "hook": "one-sentence TITLE PROMISE (same entity/fork as title; secret-document / hidden-truth angle)",
+  "estimated_sentence_budget": {{TARGET_SCENES}},
+  "chapters": [
+    {
+      "id": 1,
+      "title": "The Hook",
+      "goal": "what this section must accomplish",
+      "key_points": ["bullet", "bullet"],
+      "target_sentences": 15,
+      "pacing_phase": "a"
+    }
+  ],
+  "closer": "spoken closing narration line for the community question — SPOKEN WORDS ONLY, no camera or visual directions"
+}
+
+Rules for chapters:
+- Emit exactly 15 chapters matching the section titles above (ids 1–15).
+- Include pacing_phase "a" or "b" on every chapter (A early / B late as above).
+- Sum of all chapters' target_sentences must be near {{TARGET_SCENES}}
+  (~{{PHASE_A_SCENES}} Phase A + ~{{PHASE_B_SCENES}} Phase B).
+- Each chapter must be concrete and filmable as still images (objects, places,
+  artifacts, landscapes, symbols, court spaces — not abstract jargon alone).
+- Keep the arc inevitable across all 15 sections.
+
+CLOSER CONTRACT (critical):
+- The "closer" field is SPOKEN narration only — the final line the narrator says aloud.
+- NEVER write camera moves, shot lists, zooms, paintings-as-visual, or stage directions in closer.
+- Example good closer: "So tell us — if Anne had outlived Henry, would England have become Protestant at all?"
+- Example bad closer: "The final visual should be a slow zoom on a portrait..." (FORBIDDEN in closer).

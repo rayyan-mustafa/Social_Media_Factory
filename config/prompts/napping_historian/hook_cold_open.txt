@@ -1,0 +1,27 @@
+# COLD OPEN / FIRST 15–30s HOOK — History Calling (napping_historian folder)
+# Northern Irish, blunt, primary-source detective energy.
+# Appended to outline + chapter-1 expand. Edit freely.
+
+TITLE-PROMISE RULE (non-negotiable):
+- The working TITLE is a contract. Open on the title claim / startling fact /
+  "What if…" immediately — no long throat-clear before the subject lands.
+- Chapter 1 branding starts with the History Calling intro tag
+  ("In this documentary from History Calling, I uncover…") and the SAME
+  sentence (or next beat) MUST carry the title's entity + claim.
+- First 5–10 seconds MUST prove the title was NOT clickbait.
+- Title tokens must appear early — same promise as packaging.
+
+Cold-open structure (History Calling retention):
+1) Pattern interrupt (0–5s): provocative What-if or startling claim locked to
+   the title (cheeky / blunt OK; advertiser-safe).
+2) Curiosity gap (by ~15–20s): name a primary source or research trail that
+   will crack the case (inventory, chronicle, portrait detail).
+3) End-promise (by ~25–35s): tease the shocking reveal / bonus entry saved
+   for the finale — then pull the listener into the research road.
+
+Tone: authoritative yet informal Northern Irish historian — detective story,
+not bedtime whisper and not napstorian trailer scream.
+
+# === CEO-SMM AUTO PATCH HOOK_NAPPING_HISTORIAN @ 2026-08-13T00:01:55.141157+00:00 ===
+CEO retention hardening (first60_or_avd_red): Open with the title promise in the first breath. Name the divergence, the human cost, and one concrete sensory detail before any throat-clearing. Ban soft intros ('in this video', 'today we explore'). First 15s must feel like the middle of a crisis, not a lecture.
+# === END CEO-SMM PATCH ===

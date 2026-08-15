@@ -1,0 +1,58 @@
+# =============================================================================
+# FoC EPIC OUTLINE (~3–4 hours / ~16k words) — napping_historian high-effort
+# Loaded when RETENTION_PROFILE=foc_epic
+# =============================================================================
+
+Generate a highly detailed {{CHAPTERS_TARGET}}-act video outline for a
+Fall-of-Civilizations-quality sleep documentary (~{{TARGET_DURATION_MIN}} minutes,
+~16,000+ words narrated) for YouTube channel **The Napping Historian**.
+
+Video Topic: {{TOPIC}}
+Optional niche / angle notes: {{NICHE_NOTES}}
+
+Audience:
+- Night listeners who want long, calm, atmospheric history (FoC / soft mystery)
+- Prefer immersion over rapid cuts; no trailer SFX energy
+
+Target Length & Dual Pacing (factory knobs — obey these):
+- Target runtime ~{{TARGET_DURATION_MIN}} minutes (~{{VOICE_WPM}} WPM measured).
+- Prefer exactly {{CHAPTERS_TARGET}} acts/chapters (each act aims ~20–40 minutes of
+  Phase B deep narration after the opening hour's gallery beats).
+- Total scene/beat target ~{{TARGET_SCENES}} (band {{MIN_SCENES}}–{{MAX_SCENES}}).
+- Art direction note in each chapter goal: lighting mood, one recurring motif,
+  music arc cue (soft ambient → deeper bed → resolve) — labels only, no SFX hits.
+
+First minutes (Hook) — soft mystery only:
+- Open on quiet irreversible stake tied to the title (no ticking-clock / betrayal slam).
+- Identity may be gently withheld; never scream stakes.
+- JSON "hook" = one calm title-promise sentence.
+
+DUAL PACING:
+- Phase A — first ~{{PHASE_A_MAX_WORDS}} words (~first 10 minutes):
+  ~{{PHASE_A_SCENES}} short gallery beats ({{PHASE_A_WORDS_MIN}}–{{PHASE_A_WORDS_MAX}} words,
+  ~{{PHASE_A_SECONDS}}s TTS).
+- Phase B — remaining runtime (~3 hours):
+  ~{{PHASE_B_SCENES}} long deep-dive beats (~{{PHASE_B_WORDS}} words,
+  ~{{PHASE_B_SECONDS}}s each). Prefer multi-paragraph calm exposition.
+- Put "pacing_phase": "a" or "b" on each chapter.
+
+Outline structure ({{CHAPTERS_TARGET}} acts — rename to fit topic):
+1. Soft Hook / Threshold
+2. World Before
+3. First Cracks
+4. The Long Descent (act — deep)
+5. Institutions Under Strain
+6. Voices From the Record (primary-source flavored)
+7. Mid-Epic Re-engage (one calm "ask yourself")
+8. Cascade
+9. Human Scale (daily life under collapse / change)
+10. Aftermath Geography
+11. Memory & Myth
+12. Quiet Coda / open loop for sleep
+
+Music arc (label in key_points only): ambient_entry → tension_low → deep_bed → resolve.
+
+COMPACT JSON (critical for long outlines): keep each chapter goal ≤ 2 sentences;
+key_points ≤ 5 short bullets; target_sentences must reflect phase beat counts.
+
+Return valid JSON matching the factory outline schema (title, hook, chapters[]).

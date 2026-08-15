@@ -1,0 +1,8 @@
+# FORCE-LOCKED by live_playlist_force_lock 2026-08-15T13:06:16.010454+00:00 channel=napstorian
+# reason=live_vod_library_seed. Head = featured Live VOD (infinite -stream_loop -1).
+# Do not auto-rank until lock cleared (output/ops/live_playlist_force_lock.json).
+file '/home/ubuntu/new_yt_automation/output/live_vods/napstorian/fhEmQ1Ev8jk/final.mp4'
+file '/home/ubuntu/new_yt_automation/output/live_vods/napstorian/xS7907ehtaU/final.mp4'
+file '/home/ubuntu/new_yt_automation/output/live_vods/napstorian/2VmU9Mnypio/final.mp4'
+file '/home/ubuntu/new_yt_automation/output/live_vods/napstorian/LzjkXViqGbM/final.mp4'
+file '/home/ubuntu/new_yt_automation/output/live_vods/napstorian/R4-O4UIq35Y/final.mp4'

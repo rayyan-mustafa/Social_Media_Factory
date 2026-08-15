@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "notes": "Brand / multi-voice cast. Drop human WAVs under assets/voice_cast/. Missing human samples fall back to Kokoro IDs.",
+  "channels": {
+    "napstorian": {
+      "voice_mode": "tts_multi",
+      "speakers": {
+        "narrator": {
+          "kokoro_voice": "am_michael",
+          "human_wav": "assets/voice_cast/napstorian_narrator.wav",
+          "elevenlabs_id": null
+        },
+        "quote_a": {
+          "kokoro_voice": "am_adam",
+          "human_wav": null,
+          "elevenlabs_id": null
+        },
+        "quote_b": {
+          "kokoro_voice": "bf_emma",
+          "human_wav": null,
+          "elevenlabs_id": null
+        }
+      }
+    },
+    "napping_historian": {
+      "voice_mode": "tts_single",
+      "speakers": {
+        "narrator": {
+          "kokoro_voice": "am_michael",
+          "human_wav": "assets/voice_cast/historian_narrator.wav",
+          "elevenlabs_id": null
+        },
+        "quote_a": {
+          "kokoro_voice": "am_adam",
+          "human_wav": null,
+          "elevenlabs_id": null
+        },
+        "quote_b": {
+          "kokoro_voice": "af_sarah",
+          "human_wav": null,
+          "elevenlabs_id": null
+        },
+        "source_reader": {
+          "kokoro_voice": "bm_george",
+          "human_wav": null,
+          "elevenlabs_id": null
+        }
+      }
+    }
+  }
+}

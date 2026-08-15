@@ -1,0 +1,85 @@
+{
+  "channel": "weird_human_biology",
+  "width": 1280,
+  "height": 720,
+  "fps": 12,
+  "palette": {
+    "bg_teal": "#3E6B6B",
+    "bg_slate": "#4A5F6A",
+    "floor_line": "#2A3F45",
+    "stick_stroke": "#111111",
+    "head_fill": "#FFFFFF",
+    "eye_white": "#FFFFFF",
+    "eye_pupil": "#111111",
+    "coral_accent": "#E8724C",
+    "xray_fill": "#9BB8B8",
+    "xray_internal": "#E8724C",
+    "prop_fill": "#5A7A7A",
+    "prop_stroke": "#1A2A2E"
+  },
+  "palette_vibrant": {
+    "bg_teal": "#F2DAAE",
+    "bg_slate": "#C8B08A",
+    "floor_line": "#2A2218",
+    "stick_stroke": "#111111",
+    "head_fill": "#FFFFFF",
+    "eye_white": "#FFFFFF",
+    "eye_pupil": "#111111",
+    "coral_accent": "#D0942C",
+    "xray_fill": "#E8D4B0",
+    "xray_internal": "#D0942C",
+    "prop_fill": "#F2DAAE",
+    "prop_stroke": "#111111",
+    "crib_fill": "#989898",
+    "crib_side": "#6A6A6A",
+    "crib_post": "#5A5A5A",
+    "door_fill": "#F2DAAE",
+    "door_panel": "#E8D09A",
+    "floor_band": "#B09870",
+    "wall_base_shade": "#E8D09A",
+    "wall_corner_shadow": "#E0C898"
+  },
+  "scene_styles": {
+    "crib_door_scene": "reference_vibrant",
+    "default": "default"
+  },
+  "fonts": {
+    "kinetic": "assets/fonts/ArchivoBlack-Regular.ttf",
+    "fallback": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+  },
+  "timing": {
+    "target_beat_s_min": 2.0,
+    "target_beat_s_max": 4.0,
+    "voice_wpm": 150.0
+  },
+  "planner_model": "google/gemini-2.5-flash-lite",
+  "tts_mode": "whole_vo",
+  "stickman_quality": "v5",
+  "visual_backend": "svg_stickman_rig",
+  "visual_backends": {
+    "svg_stickman_rig": {
+      "engine": "svg_joint_rig",
+      "rasterizer": "cairosvg",
+      "path_jitter": true,
+      "v5_upgrades": [
+        "motion_lines",
+        "sclera_pupils",
+        "cel_shading",
+        "crib_depth"
+      ],
+      "note": "Production stickman. crib_door_scene → reference_vibrant + palette_vibrant (cream/beach yellow). Default layout stays teal brand."
+    },
+    "asset_compositor": {
+      "engine": "pillow_asset_layers",
+      "assets_dir": "assets/weird_biology",
+      "bootstrap": "src.services.weird_biology_assets"
+    }
+  },
+  "render": {
+    "engine": "svg_joint_rig",
+    "rasterizer": "cairosvg",
+    "path_jitter": true,
+    "render_scale": 2.0,
+    "downscale": "LANCZOS"
+  }
+}

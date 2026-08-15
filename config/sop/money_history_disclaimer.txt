@@ -1,0 +1,19 @@
+MONEY HISTORY — MANDATORY DISCLAIMER SOP
+
+Spoken (chapter 1, within first 60–90s) AND description box:
+"This video is educational history about money and banking. It is not financial advice,
+not a recommendation to buy or sell any asset, and not a substitute for a licensed advisor."
+
+HARD FORBIDDEN LANGUAGE:
+- buy / sell / go long / guaranteed returns / get rich / signal / moon / financial advice for you
+- personalized recommendations
+
+ALLOWED:
+- historical prices, past crises, institutional origins, archival citations
+
+CHART OVERLAYS:
+- Cite source on-screen when showing historical series
+- Prefer public archival data; label estimates as estimates
+
+PIN COMMENT (optional):
+"History only — not financial advice. Which monetary era should we cover next?"

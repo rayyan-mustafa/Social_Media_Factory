@@ -1,0 +1,23 @@
+# =============================================================================
+# FoC EPIC CHAPTER EXPAND — long acts (20–40 min Phase B)
+# =============================================================================
+
+Expand chapter {{CHAPTER_ID}} "{{CHAPTER_TITLE}}" for topic {{TOPIC}}.
+
+Chapter goal: {{CHAPTER_GOAL}}
+Key points: {{KEY_POINTS}}
+Pacing phase: {{PACING_PHASE}}
+Target sentences/beats: {{TARGET_SENTENCES}}
+Phase B word target ~{{PHASE_B_WORDS}} at ~{{PHASE_B_SECONDS}}s when phase=b.
+Voice WPM ~{{VOICE_WPM}}.
+
+Rules:
+- Calm sleep-documentary tone. No gore, no scream energy, no YouTube slang.
+- Phase A: short concrete image sentences ({{PHASE_A_WORDS_MIN}}–{{PHASE_A_WORDS_MAX}} words).
+- Phase B: long continuous paragraphs (~{{PHASE_B_WORDS}} words) suitable for 2–3 minute holds.
+- Include occasional primary-source flavored lines in quotes when historical.
+- Mark beat_type "reengage" at most once per video (only if chapter asks).
+- visual_prompt: atmospheric, still-friendly (reuse Ken Burns) — avoid requiring new faces every beat.
+- Art direction: one lighting mood + one motif recurring across sentences in this chapter.
+
+Return JSON chapter expansion (sentences[] with text, visual_prompt, beat_type).

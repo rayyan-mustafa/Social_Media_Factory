@@ -1,0 +1,350 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-10T15:30:00+00:00",
+  "notes": "Multi-channel niche empire registry. Staged channels are prepared (prompts + competitors + distill maps) but NOT in active sheet harvest until expansion gate passes. Shared farm brain = RMagine per-scene Wiki+Met → Flux on reject only.",
+  "visual_policy": {
+    "ladder": "per_scene_wiki_met_primary_flux_on_reject",
+    "no_hero_product_cap": true,
+    "archival_majority_min": 0.51,
+    "sources_primary": ["wikimedia", "met"],
+    "flux_only_on": ["vision_reject", "no_candidate"]
+  },
+  "core_harden": {
+    "channels": ["napstorian", "napping_historian"],
+    "ctr_pct_min": 4.0,
+    "avd_pct_min": 40.0,
+    "first_60s_retention_pct_min": 70.0,
+    "videos_per_month_locked": 15,
+    "do_not_raise_volume_until_bars": true,
+    "archival_majority_required_before_expansion": true,
+    "ypp_path": "watch_hours_and_subs",
+    "notes": "Volume locked 15/mo per channel. Expansion blocked until CTR/AVD/first-60s + archival-majority green on BOTH core channels."
+  },
+  "waves": {
+    "wave0_rmagine": {
+      "status": "required_first",
+      "description": "Per-scene Wiki+Met autonomous reuse for every scene slot"
+    },
+    "wave1_archive_native": {
+      "status": "staged",
+      "activate_after": "core_harden_ready",
+      "start_videos_per_month": 8,
+      "promote_to_15_after_bars": true,
+      "channels": [
+        "art_mysteries",
+        "forgotten_empires",
+        "science_history",
+        "royal_courts"
+      ]
+    },
+    "wave2_cpm_bridge": {
+      "status": "staged",
+      "activate_after": "wave1_at_least_one_monetized",
+      "start_videos_per_month": 8,
+      "channels": [
+        "business_empires",
+        "money_history",
+        "war_tech_history",
+        "philosophy_sleep"
+      ]
+    },
+    "wave3_network_revenue": {
+      "status": "gated",
+      "unlock_when_monetized_channels_gte": 6,
+      "layers": ["adsense", "affiliates", "sponsorships", "licensing", "product", "ma_network"]
+    }
+  },
+  "channels": {
+    "napstorian": {
+      "wave": 0,
+      "production_enabled": true,
+      "niche": "alternate_history_what_if",
+      "role": "growth_curiosity_engine",
+      "default_format": "retention",
+      "prompts_dir": "config/prompts",
+      "competitors_file": "config/competitors.json",
+      "rpm_band": "mid_history",
+      "improvise": "none"
+    },
+    "napping_historian": {
+      "wave": 0,
+      "production_enabled": true,
+      "niche": "sleep_mystery_documentary_history",
+      "role": "watch_time_avd_engine",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/napping_historian",
+      "competitors_file": "config/competitors_napping_historian.json",
+      "rpm_band": "mid_history",
+      "improvise": "none"
+    },
+    "art_mysteries": {
+      "wave": 1,
+      "production_enabled": false,
+      "niche": "art_history_mysteries",
+      "role": "met_api_moat",
+      "brand_name": "Art Mysteries Vault",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/art_mysteries",
+      "competitors_file": "config/competitors_art_mysteries.json",
+      "seed_titles_file": "config/seed_titles_art_mysteries.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_education",
+      "improvise": "minimal",
+      "evergreen_themes": [
+        "stolen masterpieces",
+        "forged paintings",
+        "artist rivalries",
+        "Met museum mysteries",
+        "Louvre secrets",
+        "lost canvases"
+      ],
+      "policy_addons": ["advertiser_safe_documentary", "no_gore_shock_thumbs"]
+    },
+    "forgotten_empires": {
+      "wave": 1,
+      "production_enabled": false,
+      "niche": "civilization_collapse_empires",
+      "role": "mega_watch_catalog",
+      "brand_name": "Forgotten Empires",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/forgotten_empires",
+      "competitors_file": "config/competitors_forgotten_empires.json",
+      "seed_titles_file": "config/seed_titles_forgotten_empires.json",
+      "chapters_target": 12,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_history",
+      "improvise": "minimal",
+      "evergreen_themes": [
+        "Rome fall",
+        "Ottoman siege",
+        "Maya collapse",
+        "Qing decline",
+        "Mali empire",
+        "Khmer temples",
+        "Byzantine twilight"
+      ],
+      "policy_addons": ["advertiser_safe_documentary", "no_atrocity_glorification"]
+    },
+    "science_history": {
+      "wave": 1,
+      "production_enabled": false,
+      "niche": "history_of_science_invention",
+      "role": "education_cpm_bridge",
+      "brand_name": "Invention Archives",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/science_history",
+      "competitors_file": "config/competitors_science_history.json",
+      "seed_titles_file": "config/seed_titles_science_history.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_high_education",
+      "improvise": "minimal",
+      "evergreen_themes": [
+        "Newton",
+        "Curie",
+        "plague medicine history",
+        "scientific instruments",
+        "patent notebooks",
+        "lab discoveries"
+      ],
+      "policy_addons": [
+        "historical_not_medical_advice",
+        "past_tense_only_for_treatments",
+        "no_treatment_claims"
+      ]
+    },
+    "royal_courts": {
+      "wave": 1,
+      "production_enabled": false,
+      "niche": "royal_courts_scandal_biography",
+      "role": "thumbnail_ctr_search_evergreen",
+      "brand_name": "Court Whispers",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/royal_courts",
+      "competitors_file": "config/competitors_royal_courts.json",
+      "seed_titles_file": "config/seed_titles_royal_courts.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_history",
+      "improvise": "minimal",
+      "evergreen_themes": [
+        "forgotten queens",
+        "succession crises",
+        "sealed letters",
+        "court intrigue",
+        "royal scandals adult history"
+      ],
+      "policy_addons": ["adult_history_not_kids", "no_sexual_content", "advertiser_safe"]
+    },
+    "business_empires": {
+      "wave": 2,
+      "production_enabled": false,
+      "niche": "business_empire_stories",
+      "role": "cpm_bridge_business_ads",
+      "brand_name": "Empire of Commerce",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/business_empires",
+      "competitors_file": "config/competitors_business_empires.json",
+      "seed_titles_file": "config/seed_titles_business_empires.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "high_business",
+      "improvise": "light_overlays",
+      "evergreen_themes": [
+        "Standard Oil",
+        "East India Company",
+        "Ford vs GM",
+        "company collapse",
+        "industrial rivalry"
+      ],
+      "policy_addons": [
+        "timeline_infographic_overlays",
+        "fact_check_sop",
+        "historical_business_not_stock_tips"
+      ],
+      "requires_overlays": true
+    },
+    "money_history": {
+      "wave": 2,
+      "production_enabled": false,
+      "niche": "history_of_money_banking",
+      "role": "finance_rpm_bridge_safe",
+      "brand_name": "Ledger of Ages",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/money_history",
+      "competitors_file": "config/competitors_money_history.json",
+      "seed_titles_file": "config/seed_titles_money_history.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "high_finance_adjacent",
+      "improvise": "light_charts_disclaimers",
+      "evergreen_themes": [
+        "history of banking",
+        "gold standard",
+        "financial crises history",
+        "coinage empires",
+        "central banks origin"
+      ],
+      "policy_addons": [
+        "not_financial_advice_disclaimer_required",
+        "no_guaranteed_returns_language",
+        "no_buy_this_stock",
+        "educational_history_only",
+        "chart_modules_citation_sop"
+      ],
+      "requires_disclaimer": true,
+      "disclaimer_file": "config/sop/money_history_disclaimer.txt"
+    },
+    "war_tech_history": {
+      "wave": 2,
+      "production_enabled": false,
+      "niche": "war_technology_strategy_history",
+      "role": "strategy_documentary",
+      "brand_name": "War Machines Archive",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/war_tech_history",
+      "competitors_file": "config/competitors_war_tech_history.json",
+      "seed_titles_file": "config/seed_titles_war_tech_history.json",
+      "chapters_target": 10,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_history",
+      "improvise": "light",
+      "evergreen_themes": [
+        "logistics history",
+        "codes and ciphers",
+        "weapons evolution",
+        "campaign strategy"
+      ],
+      "policy_addons": [
+        "documentary_not_gore",
+        "no_atrocity_glorification",
+        "no_shock_gore_thumbnails",
+        "age_gate_if_needed"
+      ]
+    },
+    "philosophy_sleep": {
+      "wave": 2,
+      "production_enabled": false,
+      "niche": "ancient_wisdom_philosophy_sleep",
+      "role": "second_sleep_session_time",
+      "brand_name": "Night Stoa",
+      "default_format": "longform",
+      "prompts_dir": "config/prompts/philosophy_sleep",
+      "competitors_file": "config/competitors_philosophy_sleep.json",
+      "seed_titles_file": "config/seed_titles_philosophy_sleep.json",
+      "chapters_target": 8,
+      "videos_per_month_start": 8,
+      "rpm_band": "mid_education",
+      "improvise": "low",
+      "evergreen_themes": [
+        "Stoics",
+        "Marcus Aurelius",
+        "Buddhist history",
+        "ancient letters",
+        "calm philosophy"
+      ],
+      "policy_addons": [
+        "historical_not_preachy_conversion",
+        "sleep_calm_tone",
+        "advertiser_safe"
+      ]
+    },
+    "weird_human_biology": {
+      "wave": 99,
+      "production_enabled": false,
+      "niche": "weird_human_biology_physiology",
+      "role": "script_and_stickman_video_factory",
+      "brand_name": "Weird Human Biology",
+      "default_format": "weird_biology",
+      "prompts_dir": "config/prompts/weird_human_biology",
+      "chapters_target": 5,
+      "videos_per_month_start": 0,
+      "rpm_band": "mid_education",
+      "improvise": "none",
+      "note": "Script factory + SVG stickman v5 E2E (whole Kokoro VO, flash-lite shot plan). Production visual_backend=svg_stickman_rig: reference_vibrant crib scenes, 2x cairosvg raster. asset_compositor opt-in via --compositor only. NOT in sheet harvest / farm GPU path.",
+      "visual_backend": "svg_stickman_rig",
+      "stickman_quality": "v5",
+      "visual_backends_available": ["svg_stickman_rig", "asset_compositor"],
+      "planner_model": "google/gemini-2.5-flash-lite",
+      "tts_mode": "whole_vo",
+      "render_engine": "svg_joint_rig+cairosvg@2x|pillow_asset_layers",
+      "pipeline_script": "src.cli.generate_weird_biology_script",
+      "pipeline_video": "src.cli.generate_weird_biology_video",
+      "evergreen_themes": [
+        "goosebumps",
+        "brain freeze",
+        "hypnic jerk",
+        "motion sickness",
+        "synaptic pruning",
+        "yawning contagion",
+        "asymmetric faces"
+      ],
+      "policy_addons": [
+        "not_medical_advice",
+        "source_grounded_claims_only",
+        "advertiser_safe_education"
+      ],
+      "pipeline": "src.cli.generate_weird_biology_script"
+    }
+  },
+  "avoid_niches": [
+    "pure_insurance_listicles",
+    "credit_card_comparison_spam",
+    "crypto_signals",
+    "get_rich_ai_spam",
+    "true_crime_gore_shock",
+    "kids_coppa",
+    "news_politics_daily"
+  ],
+  "activation_order": [
+    "art_mysteries",
+    "forgotten_empires",
+    "science_history",
+    "royal_courts",
+    "business_empires",
+    "money_history",
+    "philosophy_sleep",
+    "war_tech_history"
+  ]
+}

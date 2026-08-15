@@ -1,0 +1,185 @@
+{
+  "updated": "2026-08-10",
+  "status": "curated_fetch_hybrid",
+  "notes": [
+    "Curated topic fetch via src/services/pd_clippings.py (optional denser bank).",
+    "ACTIVE fetch sources: Wikimedia Commons + Met Open Access API only (commercial-safe).",
+    "PRIMARY still policy (napstorian + napping_historian): rmagine_scene_fetch — EVERY scene tries Wiki+Met (query distill + vision); PASS → place archival; REJECT/no-candidate → Flux. NO product hero cap.",
+    "Optional curated pack still targets 20–30 bank images; does not truncate per-scene archival.",
+    "COMMERCIAL / YOUTUBE MONETIZATION SAFE ONLY: PD, PD-Art, CC0, US-gov, Met Open Access (CC0). Reject NC/ND/fair-use/unstated/Pexels-as-PD.",
+    "Every asset stamped with commercial_ok + source_url + license.",
+    "Napstorian PD motion (10–15, target 12); historian soft motion (4–6).",
+    "Zero-budget: public APIs / direct downloads only."
+  ],
+  "hybrid": {
+    "auto_search": "rmagine_per_scene_wiki_met",
+    "curated_fetch": "now_optional",
+    "human_pick_heroes": "now_optional",
+    "target_hero_inserts": "all_scenes_wiki_met_then_flux",
+    "curated_pack_target": "20-30",
+    "target_hero_mid": 25,
+    "target_hero_hard_cap": null,
+    "no_hero_product_cap": true,
+    "keyword_stage_max": 50,
+    "vision_pass_heroes_max": null,
+    "active_fetch_sources": ["wikimedia_commons", "met_open_access"],
+    "blocking": false,
+    "wiki_met_primary": true,
+    "flux_on_vision_reject": true,
+    "flux_fills_rest": true,
+    "reuse_weak_pd": false,
+    "channels": ["napstorian", "napping_historian"],
+    "module": "src.services.rmagine_scene_fetch",
+    "met_open_access_api": "https://collectionapi.metmuseum.org/public/collection/v1",
+    "pd_motion_clips": {
+      "enabled": true,
+      "channels": ["napstorian", "napping_historian"],
+      "napstorian": {
+        "min_clips": 10,
+        "max_clips": 15,
+        "target_clips": 12,
+        "soft": false
+      },
+      "napping_historian": {
+        "min_clips": 4,
+        "max_clips": 6,
+        "soft": true,
+        "notes": "Soft/slow Ken-Burns-compatible PD pans only (maps/manuscripts/calm portraits). Not action montages."
+      },
+      "duration_s": 8,
+      "blocking": false,
+      "commercial_use_only": true,
+      "youtube_monetization_safe_required": true,
+      "allowed_licenses": ["Public Domain", "PD-Art", "CC0", "US government", "Met Open Access"],
+      "rejected_licenses": ["CC BY-NC", "CC BY-ND", "CC BY-NC-SA", "fair use", "unstated", "Pexels/Mixkit-as-PD"],
+      "notes": "Drop-ins require *.license.json with commercial_ok=true. Non-blocking if fewer pass gate."
+    }
+  },
+  "avoid": [
+    "random_modern_stock",
+    "unclear_rights_items",
+    "cookie_scrapes",
+    "cc_by_nc",
+    "cc_by_nd",
+    "fair_use_only",
+    "internet_archive_without_rights_check",
+    "pexels_as_pd",
+    "mixkit_as_pd"
+  ],
+  "niche_asset_types": [
+    "portraits",
+    "maps",
+    "manuscripts",
+    "newsreels",
+    "period_engravings",
+    "armor_objects"
+  ],
+  "sources": [
+    {
+      "id": "wikimedia_commons",
+      "name": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/",
+      "search_hint": "https://commons.wikimedia.org/w/index.php?search=&title=Special:MediaSearch&type=image",
+      "license_filter": "PD / PD-Art / CC0 only (reject NC/ND/unstated)",
+      "priority": "primary",
+      "tudor_fit": "high",
+      "pipeline": "curated_fetch_now",
+      "use_for": ["stills", "motion_still_source"]
+    },
+    {
+      "id": "met_open_access",
+      "name": "The Met Open Access",
+      "url": "https://www.metmuseum.org/about-the-met/policies-and-documents/open-access",
+      "collection": "https://www.metmuseum.org/art/collection",
+      "api": "https://collectionapi.metmuseum.org/public/collection/v1",
+      "license_filter": "Open Access = CC0; API must report isPublicDomain=true + primaryImage",
+      "priority": "primary",
+      "tudor_fit": "high",
+      "pipeline": "curated_fetch_now",
+      "use_for": ["stills", "motion_still_source"]
+    },
+    {
+      "id": "internet_archive",
+      "name": "Internet Archive",
+      "url": "https://archive.org/",
+      "search_hint": "https://archive.org/search?query=mediatype%3Amovies",
+      "license_filter": "Check item Rights / license field — many are PD films/newsreels; some are not",
+      "priority": "secondary_deferred",
+      "tudor_fit": "medium_high",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "nara",
+      "name": "US National Archives (NARA)",
+      "url": "https://www.archives.gov/",
+      "catalog": "https://catalog.archives.gov/",
+      "license_filter": "US federal works often PD; confirm description / rights note",
+      "priority": "secondary_deferred",
+      "tudor_fit": "medium",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "loc",
+      "name": "Library of Congress",
+      "url": "https://www.loc.gov/",
+      "digital_collections": "https://www.loc.gov/collections/",
+      "license_filter": "Many historical items PD or no known copyright restriction — read Rights & Access",
+      "priority": "secondary_deferred",
+      "tudor_fit": "high",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "europeana",
+      "name": "Europeana",
+      "url": "https://www.europeana.eu/",
+      "license_filter": "Filter to PD / CC0 / public domain mark; skip restrictive CC",
+      "priority": "secondary_deferred",
+      "tudor_fit": "high",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "british_library",
+      "name": "British Library",
+      "url": "https://www.bl.uk/",
+      "images_online": "https://imagesonline.bl.uk/",
+      "license_filter": "Use only items clearly PD / open; BL catalog varies — check each item",
+      "priority": "secondary_deferred",
+      "tudor_fit": "high",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "rijksmuseum",
+      "name": "Rijksmuseum",
+      "url": "https://www.rijksmuseum.nl/en",
+      "open_data": "https://www.rijksmuseum.nl/en/research/conduct-research/data/policy",
+      "license_filter": "Open images often CC0 — confirm per object",
+      "priority": "secondary_deferred",
+      "tudor_fit": "high",
+      "pipeline": "deferred"
+    },
+    {
+      "id": "pexels",
+      "name": "Pexels",
+      "url": "https://www.pexels.com/",
+      "license_filter": "License-not-PD (Pexels License). BLOCKED from PD path / never label as PD",
+      "priority": "blocked_for_pd_path",
+      "tudor_fit": "low",
+      "pipeline": "blocked"
+    },
+    {
+      "id": "mixkit",
+      "name": "Mixkit",
+      "url": "https://mixkit.co/",
+      "license_filter": "License-not-PD (Mixkit License). BLOCKED from PD path / never label as PD",
+      "priority": "blocked_for_pd_path",
+      "tudor_fit": "low",
+      "pipeline": "blocked"
+    }
+  ],
+  "skipped": [
+    {
+      "id": "meta_adobe_cookie_scrapes",
+      "reason": "login walls / ToS risk — never automate"
+    }
+  ]
+}

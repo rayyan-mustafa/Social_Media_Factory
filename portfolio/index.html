@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[[AGENCY_NAME]] — AI Front Desk for Home Services</title>
+<meta name="description" content="Custom AI websites and 24/7 booking chatbots for home-service businesses. See a live SAMPLE demo, check pricing, and get in touch.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand:      #0f4c35;
+    --brand-mid:  #1e6b4f;
+    --brand-lite: #d4ede2;
+    --accent:     #f59e0b;
+    --dark:       #0d1117;
+    --card-bg:    rgba(255,255,255,0.06);
+    --radius:     16px;
+    --max-w:      860px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    line-height: 1.65;
+  }
+
+  /* ── layout helpers ── */
+  .container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+  section { padding: 80px 0; }
+  section:nth-child(odd) { background: transparent; }
+  section:nth-child(even) { background: rgba(255,255,255,0.025); }
+
+  /* ── hero / header ── */
+  .hero {
+    background: linear-gradient(135deg, #0a2e1f 0%, #0f4c35 50%, #1a1a2e 100%);
+    padding: 100px 24px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(30,107,79,0.35) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.4);
+    color: #f59e0b;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 58px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 22px;
+    background: linear-gradient(135deg, #ffffff 0%, #a8d8c0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero h1 .agency-placeholder {
+    -webkit-text-fill-color: transparent;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+  .hero-pitch {
+    font-size: 18px;
+    color: #8b9ea9;
+    max-width: 560px;
+    margin: 0 auto 40px;
+  }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: linear-gradient(135deg, #1e6b4f, #0f4c35);
+    color: white;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(30,107,79,0.5); }
+  .btn-ghost {
+    background: transparent;
+    color: #e6edf3;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
+
+  /* ── what I do ── */
+  .what-i-do h2 { font-size: 28px; font-weight: 700; margin-bottom: 20px; color: #fff; }
+  .what-i-do p  { font-size: 17px; color: #8b9ea9; max-width: 640px; }
+  .what-i-do p + p { margin-top: 14px; }
+  .highlight { color: #d4ede2; font-weight: 500; }
+
+  /* ── demo section ── */
+  .demo-section h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  .demo-section .subtitle { font-size: 15px; color: #8b9ea9; margin-bottom: 28px; }
+  .sample-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(92,61,46,0.5);
+    border: 1px solid rgba(244,232,216,0.2);
+    color: #f4e8d8;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  .sample-label::before { content: '⚠'; font-size: 14px; }
+  .demo-wrapper {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    max-width: 480px;
+  }
+  .demo-wrapper iframe {
+    width: 100%;
+    height: 640px;
+    border: none;
+    display: block;
+    background: #f4f2ee;
+  }
+
+  /* ── pricing ── */
+  .pricing h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  .pricing .subtitle { font-size: 15px; color: #8b9ea9; margin-bottom: 40px; }
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+  }
+  .tier-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .tier-card:hover { transform: translateY(-4px); border-color: rgba(30,107,79,0.5); }
+  .tier-card.featured {
+    border-color: rgba(30,107,79,0.6);
+    background: rgba(30,107,79,0.12);
+  }
+  .tier-card.featured::before {
+    content: 'Most Popular';
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--brand-mid);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 0 0 10px 10px;
+  }
+  .tier-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 10px; }
+  .tier-price { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+  .tier-price-note { font-size: 12px; color: #8b9ea9; margin-bottom: 20px; }
+  .tier-includes { font-size: 14px; color: #c6d6de; line-height: 1.7; }
+  .tier-tag {
+    display: inline-block;
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-top: 14px;
+  }
+
+  /* ── contact / sales bot ── */
+  .contact-section h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  .contact-section .subtitle { font-size: 15px; color: #8b9ea9; margin-bottom: 32px; }
+  .contact-wrapper {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    max-width: 480px;
+  }
+  .contact-wrapper iframe {
+    width: 100%;
+    height: 640px;
+    border: none;
+    display: block;
+    background: #f4f2ee;
+  }
+
+  /* ── footer ── */
+  footer {
+    background: #090d12;
+    padding: 32px 24px;
+    text-align: center;
+    font-size: 13px;
+    color: #4a6070;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  footer a { color: #8b9ea9; text-decoration: none; }
+  footer a:hover { color: #fff; }
+
+  /* ── nav ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,17,23,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 16px 24px;
+  }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo { font-size: 16px; font-weight: 700; color: #fff; text-decoration: none; }
+  .nav-links { display: flex; gap: 24px; list-style: none; }
+  .nav-links a { font-size: 14px; color: #8b9ea9; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: #fff; }
+
+  @media (max-width: 600px) {
+    .nav-links { display: none; }
+    .tier-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">[[AGENCY_NAME]]</a>
+    <ul class="nav-links">
+      <li><a href="#what-i-do">What I do</a></li>
+      <li><a href="#demo">Live Demo</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#contact">Get in touch</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── Section 1: Header ── -->
+<header class="hero">
+  <div class="container">
+    <div class="hero-badge">Home Services · AI Front Desk</div>
+    <h1>
+      <span class="agency-placeholder">[[AGENCY_NAME]]</span><br>
+      AI websites &amp; chatbots<br>for local home services
+    </h1>
+    <p class="hero-pitch">
+      Your phone shouldn't be your only employee after 7&nbsp;pm.
+      I build AI booking assistants that capture leads, answer questions,
+      and handle after-hours emergencies — on autopilot.
+    </p>
+    <div class="cta-row">
+      <a href="#demo" class="btn-primary" id="hero-demo-btn">See a live demo</a>
+      <a href="#contact" class="btn-ghost" id="hero-contact-btn">Talk to me</a>
+    </div>
+  </div>
+</header>
+
+<!-- ── Section 2: What I do ── -->
+<section class="what-i-do" id="what-i-do">
+  <div class="container">
+    <h2>What I do</h2>
+    <p>
+      I build <span class="highlight">custom AI websites with a built-in booking chatbot</span>
+      for HVAC contractors, plumbers, electricians, and other home-service trades.
+      The chatbot answers questions, captures booking requests, and sends emergency
+      after-hours messages — all without you lifting a finger.
+    </p>
+    <p>
+      You see a working demo <em>before</em> you pay anything.
+      I personally maintain the bot every month so it never goes stale.
+      No lock-in contracts, no hidden fees, no ticket queues — just a
+      direct line to the person who built it.
+    </p>
+    <p>
+      Every booking is confirmed by a human first.
+      The AI captures the lead; you decide what happens next.
+    </p>
+  </div>
+</section>
+
+<!-- ── Section 3: Live Demo ── -->
+<section class="demo-section" id="demo">
+  <div class="container">
+    <h2>Live demo — HVAC booking assistant</h2>
+    <p class="subtitle">Try the chatbot below. Ask about services, prices, hours, or say you'd like to book.</p>
+    <div class="sample-label">Sample demo — not a real business</div>
+    <div class="demo-wrapper" id="demo-chatbot-wrapper">
+      <iframe
+        src="../client-chatbot-demo.html"
+        title="HVAC AI Chatbot Demo"
+        id="hvac-demo-iframe"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+      ></iframe>
+    </div>
+    <p style="margin-top:16px; font-size:13px; color:#4a6070;">
+      This is a fictional HVAC business built for portfolio demonstration only.
+      No real bookings are made and no data is stored.
+    </p>
+  </div>
+</section>
+
+<!-- ── Section 4: Pricing ── -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <h2>Simple, transparent pricing</h2>
+    <p class="subtitle">
+      One-time setup fee + a flat monthly retainer. No per-conversation fees, no surprise bills.
+      <br><em style="color:#f59e0b; font-size:13px;">[[CONFIRM PRICING]] — founder: replace the ranges below with your final numbers before publishing.</em>
+    </p>
+    <div class="tier-grid">
+
+      <!-- Tier 1 -->
+      <div class="tier-card" id="tier-basic">
+        <div class="tier-name">Tier 1 · Basic</div>
+        <div class="tier-price">[[CONFIRM PRICING]]<br><span style="font-size:16px;">€250–800 setup</span></div>
+        <div class="tier-price-note">+ €25–75 / month</div>
+        <div class="tier-includes">
+          One-page branded website<br>
+          AI chatbot on web widget<br>
+          Booking capture to shared sheet<br>
+          Monthly knowledge-base refresh<br>
+          Direct founder contact line
+        </div>
+        <div class="tier-tag">[[CONFIRM PRICING]]</div>
+      </div>
+
+      <!-- Tier 2 -->
+      <div class="tier-card featured" id="tier-standard">
+        <div class="tier-name">Tier 2 · Standard</div>
+        <div class="tier-price">[[CONFIRM PRICING]]<br><span style="font-size:16px;">€450 setup</span></div>
+        <div class="tier-price-note">+ €45 / month</div>
+        <div class="tier-includes">
+          Everything in Tier&nbsp;1, plus:<br>
+          WhatsApp channel (when verified)<br>
+          Missed-call text-back<br>
+          Appointment reminders<br>
+          Multi-channel inbox view
+        </div>
+        <div class="tier-tag">[[CONFIRM PRICING]]</div>
+      </div>
+
+      <!-- Tier 3 -->
+      <div class="tier-card" id="tier-premium">
+        <div class="tier-name">Tier 3 · Premium</div>
+        <div class="tier-price">[[CONFIRM PRICING]]<br><span style="font-size:16px;">€800 setup</span></div>
+        <div class="tier-price-note">+ €75 / month</div>
+        <div class="tier-includes">
+          Everything in Tier&nbsp;2, plus:<br>
+          AI voice receptionist (phone)<br>
+          Calendar sync<br>
+          Priority support &amp; response
+        </div>
+        <div class="tier-tag" style="background:rgba(100,100,120,0.15); border-color:rgba(180,180,200,0.25); color:#8b9ea9;">
+          Coming soon — available once established
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Section 5: Contact (sales chatbot) ── -->
+<section class="contact-section" id="contact">
+  <div class="container">
+    <h2>Ready to talk?</h2>
+    <p class="subtitle">
+      Ask the assistant anything — pricing, how it works, what you get.
+      Or just say hi. [[AGENCY_NAME]] will follow up directly.
+    </p>
+    <div class="contact-wrapper" id="contact-chatbot-wrapper">
+      <iframe
+        src="../sales-chatbot-portfolio.html"
+        title="Sales Assistant Chatbot"
+        id="sales-bot-iframe"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+      ></iframe>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS: add only after client #1 delivers a real, written
+     testimonial. Do not fill with placeholder or fake content. -->
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="container">
+    <p>
+      &copy; <span id="yr"></span> [[AGENCY_NAME]] &mdash; built by a human, powered by AI.
+      &nbsp;|&nbsp;
+      <a href="mailto:[[CONTACT_EMAIL]]">[[CONTACT_EMAIL]]</a>
+    </p>
+    <p style="margin-top:8px; font-size:12px; color:#2a3a44;">
+      No testimonials, reviews, or client counts are claimed on this page — this is a portfolio-in-progress.
+      All demo content is fictional.
+    </p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

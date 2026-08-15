@@ -1,0 +1,21 @@
+# =============================================================================
+# PRIMARY SOURCE READING — chapter expand
+# =============================================================================
+
+Expand chapter {{CHAPTER_ID}} "{{CHAPTER_TITLE}}" for {{TOPIC}}.
+
+Goal: {{CHAPTER_GOAL}}
+Key points: {{KEY_POINTS}}
+Phase: {{PACING_PHASE}} · target beats: {{TARGET_SENTENCES}}
+Phase B ~{{PHASE_B_WORDS}} words / {{PHASE_B_SECONDS}}s when applicable.
+
+If this is a source_passage chapter:
+- Emit long quoted blocks as sentences; prefix clearly with quotation style.
+- Tag beat_type "" and put speaker hint in visual_prompt metadata line like
+  "[speaker:source_reader]" at most once per sentence group (factory may parse).
+If interstitial:
+- Short calm context; speaker narrator; soft mystery only.
+
+visual_prompt: parchment, candlelit study, archive atmosphere — still-friendly.
+
+Return JSON sentences[] expansion.

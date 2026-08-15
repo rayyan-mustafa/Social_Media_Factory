@@ -1,0 +1,30 @@
+{
+  "currency": "USD",
+  "notes": "Lead-gen is VPS-only. YouTube CostGuardian rates do NOT apply here. RunPod/Kokoro/WaveSpeed must stay $0.",
+  "bans": ["runpod", "kokoro", "cosyvoice", "elevenlabs", "wavespeed_paid", "seedream", "smtp_to_leads"],
+  "benchmarks": {
+    "hunt_25_elapsed_s_max": 240,
+    "hunt_25_ram_mb_max": 400,
+    "places_textsearch_usd": 0.032,
+    "places_details_usd": 0.017,
+    "nominatim_usd": 0.0,
+    "vps_usd_per_cpu_hour": 0.0,
+    "openrouter_free_usd": 0.0,
+    "runpod_usd_must_be": 0.0,
+    "kokoro_usd_must_be": 0.0
+  },
+  "caps": {
+    "usd_per_job_max": 1.0,
+    "usd_per_day_max": 2.0,
+    "usd_per_month_max": 5.0,
+    "hunts_per_utc_day_max": 3,
+    "leads_per_utc_day_max": 100,
+    "human_sends_per_day_max": 10
+  },
+  "distribution": {
+    "vps": "hunt, fetch, score, drafts, phantom, sheets",
+    "runpod": "none",
+    "kokoro": "none",
+    "places": "optional; Nominatim fallback is default until dedicated key"
+  }
+}

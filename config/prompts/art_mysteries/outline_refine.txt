@@ -1,0 +1,4 @@
+# Optional refine pass for Art Mysteries Vault
+Tighten mystery hooks, remove recap, keep advertiser-safe tone.
+Input outline JSON: {{OUTLINE_JSON}}
+Return refined outline JSON only.

@@ -1,0 +1,107 @@
+{
+  "style_id": "illustrated_tudor_what_if",
+  "version": 2,
+  "notes": "Painterly digital illustration lock from config/visual_refs/. NOT photoreal cinematic film stills.",
+  "reference_images": [
+    "config/visual_refs/ref_01_courtyard_crisis.png",
+    "config/visual_refs/ref_02_night_carriage.png",
+    "config/visual_refs/ref_03_candlelit_study.png",
+    "config/visual_refs/ref_04_library_cardinal.png",
+    "config/visual_refs/ref_05_courtyard_illustrated.png",
+    "config/visual_refs/ref_06_night_carriage_illustrated.png"
+  ],
+  "characters": [
+    {
+      "id": "henry_viii",
+      "display_name": "King Henry VIII",
+      "aliases": [
+        "henry viii",
+        "king henry",
+        "henry the eighth",
+        "henry r",
+        "the king",
+        "tudor king",
+        "king of england"
+      ],
+      "lock": "same recurring King Henry VIII: middle-aged stocky build, short reddish-brown hair, neatly trimmed reddish-brown beard, intense light-colored eyes, forest-green velvet doublet with intricate gold embroidery and slashed sleeves, white ruff or linen collar, heavy gold chain of office, black Tudor flat cap with white feather, period-accurate royal presence",
+      "seed_salt": 11001,
+      "priority": 10
+    },
+    {
+      "id": "anne_boleyn",
+      "display_name": "Anne Boleyn",
+      "aliases": [
+        "anne boleyn",
+        "anne",
+        "boleyn",
+        "queen anne",
+        "lady anne"
+      ],
+      "lock": "same recurring Anne Boleyn: slender dark-eyed Tudor noblewoman, dark hair under French hood or pearl headdress, elegant dark gown with rich fabric, composed anxious expression, historically plausible likeness (not modern celebrity)",
+      "seed_salt": 11007,
+      "priority": 9
+    },
+    {
+      "id": "cardinal_cleric",
+      "display_name": "Cardinal / senior cleric",
+      "aliases": [
+        "cardinal",
+        "bishop",
+        "archbishop",
+        "cleric",
+        "priest",
+        "wolsey",
+        "thomas wolsey",
+        "cranmer"
+      ],
+      "lock": "same recurring senior Catholic cleric: older man, short white-grey hair, thin wire-framed spectacles when scholarly, black cassock with red piping and buttons, wide red sash, red zucchetto skullcap, silver pectoral cross on chain, contemplative scholarly posture",
+      "seed_salt": 11013,
+      "priority": 8
+    },
+    {
+      "id": "cromwell",
+      "display_name": "Thomas Cromwell",
+      "aliases": [
+        "cromwell",
+        "thomas cromwell",
+        "secretary cromwell"
+      ],
+      "lock": "same recurring Thomas Cromwell: middle-aged Tudor statesman, close-cropped dark hair with early grey, clean shrewd face, dark practical doublet, composed calculating expression",
+      "seed_salt": 11017,
+      "priority": 8
+    },
+    {
+      "id": "tudor_guard",
+      "display_name": "Tudor royal guard",
+      "aliases": [
+        "guard",
+        "guards",
+        "halberdier",
+        "yeoman",
+        "yeomen",
+        "soldier",
+        "soldiers",
+        "men-at-arms"
+      ],
+      "lock": "same recurring Tudor royal guards: stern faces, green-and-white striped or slashed puffed sleeves, silver breastplate or kettle helmet / morion, long halberds or spears, disciplined formation around nobility",
+      "seed_salt": 11021,
+      "priority": 5
+    },
+    {
+      "id": "sick_commoner",
+      "display_name": "Ill commoner / foreground sufferer",
+      "aliases": [
+        "sick man",
+        "ill man",
+        "dying man",
+        "commoner",
+        "peasant",
+        "sufferer",
+        "plague victim"
+      ],
+      "lock": "pale sweaty exhausted commoner in plain grey-brown wool, slumped posture, waxy complexion, labored breathing look, beads of sweat, no royal dress",
+      "seed_salt": 11027,
+      "priority": 4
+    }
+  ]
+}

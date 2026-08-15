@@ -1,0 +1,20 @@
+{
+  "notes": "Agency outreach mail. MX/SPF/DKIM/DMARC on the domain; VPS hosts web only. Never Postfix on this VPS for cold mail.",
+  "send_domain": "",
+  "from_local_part": "hello",
+  "mail_host": "google_workspace",
+  "vps_may_send_smtp": false,
+  "require_spf": true,
+  "require_dkim": true,
+  "require_dmarc": true,
+  "dmarc_policy_min": "none",
+  "dkim_selectors": ["google", "selector1", "selector2", "default", "k1", "s1"],
+  "forbid_gmail_from_for_outreach": true,
+  "forbid_mailchimp_cold": true,
+  "human_send_until_auth_green": true,
+  "can_spam": {
+    "physical_address_required": true,
+    "unsubscribe_line_required": true,
+    "how_we_found_you_required": true
+  }
+}

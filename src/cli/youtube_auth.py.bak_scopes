@@ -1,0 +1,173 @@
+"""CLI: YouTube OAuth — browser window / account picker for Brand Account.
+
+Usage (run in Cursor terminal so the browser can open / port-forward works):
+  .venv/bin/python -m src.cli.youtube_auth
+
+When Google asks, pick your Brand Account (not only the personal Gmail).
+Requires Desktop OAuth client in config/youtube_client_secrets.json.
+"""
+
+from __future__ import annotations
+
+import sys
+import webbrowser
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+import typer
+from rich.console import Console
+from rich.panel import Panel
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.services.publish_youtube import AUTH_SCOPES  # noqa: E402
+from src.services.settings import ROOT as PROJ, get_settings  # noqa: E402
+
+app = typer.Typer(
+    add_completion=False,
+    help="Authorize YouTube upload + comments (OAuth browser)",
+)
+console = Console()
+
+
+@app.command()
+def main(
+    port: int = typer.Option(
+        8080,
+        "--port",
+        "-p",
+        help="Localhost redirect port (Cursor must forward this on remote SSH)",
+    ),
+    no_browser: bool = typer.Option(
+        False,
+        "--no-browser",
+        help="Do not auto-open browser; print URL only",
+    ),
+) -> None:
+    """Open Google sign-in (account picker) and save config/youtube_token.json."""
+    try:
+        from google_auth_oauthlib.flow import InstalledAppFlow
+    except ImportError as exc:
+        console.print(
+            "[red]Missing libs[/red] — run:\n"
+            "  .venv/bin/pip install google-api-python-client "
+            "google-auth-oauthlib google-auth-httplib2"
+        )
+        raise typer.Exit(1) from exc
+
+    get_settings.cache_clear()
+    s = get_settings()
+    secrets = Path(s.youtube_client_secrets_path)
+    token_path = Path(s.youtube_token_path)
+    if not secrets.is_absolute():
+        secrets = PROJ / secrets
+    if not token_path.is_absolute():
+        token_path = PROJ / token_path
+
+    if not secrets.exists():
+        console.print(f"[red]Missing client secrets:[/red] {secrets}")
+        console.print(
+            "Google Cloud → APIs → enable YouTube Data API v3 →\n"
+            "Credentials → OAuth client ID (Desktop) → download JSON → save as above path."
+        )
+        raise typer.Exit(2)
+
+    console.print(
+        Panel.fit(
+            "[bold]YouTube Brand Account sign-in[/bold]\n\n"
+            "1. A browser window / tab should open (or use the URL below).\n"
+            "2. Choose your [bold]Brand Account[/bold] when Google asks "
+            "(not only personal Gmail).\n"
+            "3. Allow YouTube upload + manage comments (needed for SMM pin).\n"
+            "4. Wait for success — token is saved automatically.\n\n"
+            f"[dim]Remote VPS: Cursor must forward localhost:{port} "
+            f"(Ports panel → forward {port}).[/dim]",
+            title="OAuth",
+        )
+    )
+
+    flow = InstalledAppFlow.from_client_secrets_file(str(secrets), AUTH_SCOPES)
+
+    # Prefer browser popup + local redirect (works with Cursor port-forward).
+    # prompt=select_account forces the account / Brand Account chooser.
+    try:
+        creds = flow.run_local_server(
+            host="localhost",
+            port=int(port),
+            open_browser=not no_browser,
+            prompt="select_account",
+            access_type="offline",
+            authorization_prompt_message=(
+                "\nIf no window popped up, open this URL:\n{url}\n\n"
+                "Sign in → pick Brand Account → Allow.\n"
+            ),
+            success_message=(
+                "YouTube auth OK — you can close this tab and return to the terminal."
+            ),
+        )
+    except OSError as exc:
+        console.print(f"[yellow]Local server on :{port} failed ({exc}).[/yellow]")
+        console.print("Falling back to paste-redirect-URL mode…")
+        creds = _paste_redirect_flow(flow, open_browser=not no_browser)
+    except Exception as exc:  # noqa: BLE001
+        console.print(f"[yellow]Browser flow failed ({exc}).[/yellow]")
+        console.print("Falling back to paste-redirect-URL mode…")
+        creds = _paste_redirect_flow(flow, open_browser=not no_browser)
+
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    # Backup previous token if present
+    if token_path.exists():
+        bak = token_path.with_suffix(".json.bak")
+        bak.write_text(token_path.read_text(encoding="utf-8"), encoding="utf-8")
+        console.print(f"[dim]Previous token backed up → {bak}[/dim]")
+    token_path.write_text(creds.to_json(), encoding="utf-8")
+    console.print(f"[green]OK[/green] token → {token_path}")
+    console.print(
+        "Next: upload with\n"
+        "  .venv/bin/python -m src.cli.publish_video PATH/final.mp4 --allow-short"
+    )
+
+
+def _paste_redirect_flow(flow, *, open_browser: bool):
+    """Remote-safe fallback: user pastes the localhost redirect URL that contains ?code=."""
+    # Use localhost redirect so Desktop clients accept it; user copies bar URL after allow.
+    flow.redirect_uri = "http://localhost:8080/"
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        prompt="select_account",
+        include_granted_scopes="true",
+    )
+    console.print("[bold]Open this URL and sign in with your Brand Account:[/bold]")
+    console.print(auth_url)
+    if open_browser:
+        try:
+            webbrowser.open(auth_url)
+        except Exception:  # noqa: BLE001
+            pass
+    console.print()
+    console.print(
+        "After you Allow, the browser may show [yellow]connection refused[/yellow] "
+        "on localhost — that is OK.\n"
+        "Copy the FULL URL from the address bar (starts with http://localhost:8080/...) "
+        "and paste it here."
+    )
+    raw = typer.prompt("Paste redirect URL (or just the code= value)").strip()
+    if not raw:
+        raise typer.Exit(2)
+    code = raw
+    if raw.startswith("http://") or raw.startswith("https://"):
+        qs = parse_qs(urlparse(raw).query)
+        if "code" not in qs or not qs["code"]:
+            console.print("[red]No code= in that URL[/red]")
+            raise typer.Exit(2)
+        code = qs["code"][0]
+    elif "code=" in raw:
+        code = raw.split("code=", 1)[1].split("&", 1)[0]
+    flow.fetch_token(code=code)
+    return flow.credentials
+
+
+if __name__ == "__main__":
+    app()

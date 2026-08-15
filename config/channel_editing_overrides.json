@@ -1,0 +1,543 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-15T07:39:32.871679+00:00",
+  "notes": "Runtime SMM editing overrides — auto-written by premium_editor_smm / apply_editing_lever. Safe to mutate without Rayyan consent.",
+  "channels": {
+    "napstorian": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "ticking_clock"
+        },
+        "thumbnail_style": {
+          "preset": "napstorian_punch",
+          "focal_subject": "face_or_map",
+          "map_vs_face": "face",
+          "word_count_max": 5,
+          "text_color": "yellow",
+          "stroke": "black_sharp",
+          "contrast_boost": 1.2,
+          "mood": "dramatic",
+          "text_density_est": 0.305,
+          "color_contrast_est": 0.852,
+          "source": "smm_thumb_redesign",
+          "updated_at": "2026-08-15T07:06:45.289110+00:00"
+        },
+        "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding face — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.305.\n- Contrast target≈0.852; Rembrandt key + deep cinematic shadows."
+      },
+      "active_experiment": {
+        "lever": "hook_pattern",
+        "value": "ticking_clock",
+        "applied_at": "2026-08-15T07:39:32.865677+00:00",
+        "baseline_overrides": {
+          "hook_pattern": {
+            "default": "ticking_clock"
+          },
+          "thumbnail_style": {
+            "preset": "napstorian_punch",
+            "focal_subject": "face_or_map",
+            "map_vs_face": "face",
+            "word_count_max": 5,
+            "text_color": "yellow",
+            "stroke": "black_sharp",
+            "contrast_boost": 1.2,
+            "mood": "dramatic",
+            "text_density_est": 0.305,
+            "color_contrast_est": 0.852,
+            "source": "smm_thumb_redesign",
+            "updated_at": "2026-08-15T07:06:45.289110+00:00"
+          },
+          "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding face — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.305.\n- Contrast target≈0.852; Rembrandt key + deep cinematic shadows."
+        }
+      },
+      "updated_at": "2026-08-15T07:39:32.867428+00:00",
+      "editing_directive": {
+        "channel": "napstorian",
+        "created_at": "2026-08-15T07:39:32.863341+00:00",
+        "source": "premium_editor_smm",
+        "profile_label": "dramatic What-If documentary",
+        "dominant_competitor_form": "mid_form_drama",
+        "cluster_shift": true,
+        "underperforming": false,
+        "applied_lever": "hook_pattern",
+        "lever_value": "ticking_clock",
+        "hook_pattern": "ticking_clock",
+        "thumbnail_style": {
+          "preset": "napstorian_punch",
+          "focal_subject": "face_or_map",
+          "map_vs_face": "face",
+          "word_count_max": 5,
+          "text_color": "yellow",
+          "stroke": "black_sharp",
+          "contrast_boost": 1.2,
+          "mood": "dramatic",
+          "text_density_est": 0.305,
+          "color_contrast_est": 0.852,
+          "source": "smm_thumb_redesign",
+          "updated_at": "2026-08-15T07:06:45.289110+00:00"
+        },
+        "compose": {
+          "sfx_density": "high",
+          "beat_interval_s": 55,
+          "overlay_cadence_s": 60,
+          "ken_burns_scale": 1.12,
+          "max_infographic_cards": 16,
+          "sfx_event_cap": 28,
+          "trailer_sfx": true
+        },
+        "audio": {
+          "ambient_bed_db": -30,
+          "historian_sfx_off": false,
+          "compose_sfx_enabled": true,
+          "voice_mode": "tts_multi",
+          "score_mode": "trailer_bed",
+          "ambient_playlist_dir": "assets/audio/ambient",
+          "trailer_playlist_dir": "assets/audio/trailer"
+        },
+        "pacing": {
+          "target_length_band_min_s": 540,
+          "target_length_band_max_s": 720,
+          "dual_pacing": true,
+          "plate_hold_s": 45,
+          "plate_hold_max_s": 60,
+          "cold_open_stakes": true,
+          "format_mode": "standard"
+        },
+        "motion": {
+          "motion_mode": "animated_maps",
+          "pd_clips_count_min": 10,
+          "pd_clips_count_max": 15,
+          "cut_frequency": "moderate_high",
+          "animated_maps": true,
+          "motion_graphics": true
+        },
+        "motion_mode": "animated_maps",
+        "format_mode": "standard",
+        "voice_mode": "tts_multi",
+        "score_mode": "trailer_bed",
+        "competitor_hints": {
+          "hook_pattern": {
+            "default": "ticking_clock",
+            "preferred": [
+              "ticking_clock",
+              "false_assumption",
+              "execution/betrayal"
+            ],
+            "avoid": [
+              "identity_withheld"
+            ]
+          },
+          "compose": {
+            "sfx_density": "high",
+            "beat_interval_s": 50,
+            "overlay_cadence_s": 55,
+            "ken_burns_scale": 1.12,
+            "max_infographic_cards": 16,
+            "sfx_event_cap": 28,
+            "trailer_sfx": true
+          }
+        },
+        "voice_cast": {
+          "voice_mode": "tts_multi",
+          "speakers": {
+            "narrator": {
+              "kokoro_voice": "am_michael",
+              "human_wav": "assets/voice_cast/napstorian_narrator.wav",
+              "elevenlabs_id": null
+            },
+            "quote_a": {
+              "kokoro_voice": "am_adam",
+              "human_wav": null,
+              "elevenlabs_id": null
+            },
+            "quote_b": {
+              "kokoro_voice": "bf_emma",
+              "human_wav": null,
+              "elevenlabs_id": null
+            }
+          }
+        },
+        "experiment_lever": {
+          "lever": "hook_pattern",
+          "value": "ticking_clock"
+        }
+      }
+    },
+    "napping_historian": {
+      "editing_directive": {
+        "channel": "napping_historian",
+        "created_at": "2026-08-15T07:39:32.869789+00:00",
+        "source": "premium_editor_smm",
+        "profile_label": "History Calling–like mystery documentary",
+        "dominant_competitor_form": "mystery_doc",
+        "cluster_shift": true,
+        "underperforming": false,
+        "applied_lever": "hook_pattern",
+        "lever_value": "false_assumption",
+        "hook_pattern": "false_assumption",
+        "thumbnail_style": {
+          "preset": "historian_soft",
+          "focal_subject": "artifact_or_portrait",
+          "map_vs_face": "artifact",
+          "word_count_max": 4,
+          "text_color": "soft_white",
+          "stroke": "soft_dark",
+          "contrast_boost": 1.05,
+          "mood": "moody_calm",
+          "text_density_est": 0.377,
+          "color_contrast_est": 0.718,
+          "source": "smm_thumb_redesign",
+          "updated_at": "2026-08-15T07:39:32.854928+00:00"
+        },
+        "compose": {
+          "sfx_density": "none",
+          "beat_interval_s": 0,
+          "overlay_cadence_s": 180,
+          "ken_burns_scale": 1.06,
+          "max_infographic_cards": 8,
+          "sfx_event_cap": 0,
+          "trailer_sfx": false
+        },
+        "audio": {
+          "ambient_bed_db": -32,
+          "historian_sfx_off": true,
+          "compose_sfx_enabled": false,
+          "voice_mode": "tts_single",
+          "score_mode": "ambient_soft",
+          "ambient_playlist_dir": "assets/audio/ambient",
+          "licensed_score_provider": null,
+          "epidemic_playlist_id": null,
+          "artlist_playlist_id": null
+        },
+        "pacing": {
+          "target_length_band_min_s": 1200,
+          "target_length_band_max_s": 2700,
+          "dual_pacing": true,
+          "plate_hold_s": 120,
+          "plate_hold_max_s": 210,
+          "cold_open_stakes": false,
+          "format_mode": "standard",
+          "optional_formats": [
+            "primary_source_reading",
+            "foc_epic"
+          ],
+          "optional_formats_note": "primary_source_reading optional; foc_epic aspirational only — never default format_mode or length target (not 10800–14400s)",
+          "foc_epic_band_min_s": 10800,
+          "foc_epic_band_max_s": 14400
+        },
+        "motion": {
+          "motion_mode": "ken_burns",
+          "pd_clips_count_min": 4,
+          "pd_clips_count_max": 6,
+          "cut_frequency": "low",
+          "animated_maps": false,
+          "motion_graphics": false,
+          "pd_motion_soft": true,
+          "pd_motion_notes": "Soft/slow Ken-Burns-compatible PD pans only (History Calling calm — not action montages)."
+        },
+        "motion_mode": "ken_burns",
+        "format_mode": "standard",
+        "voice_mode": "tts_single",
+        "score_mode": "ambient_soft",
+        "competitor_hints": {
+          "pacing": {
+            "target_length_band_min_s": 1200,
+            "target_length_band_max_s": 2700,
+            "dual_pacing": true,
+            "plate_hold_s": 120,
+            "plate_hold_max_s": 210,
+            "cold_open_stakes": false,
+            "format_mode": "standard",
+            "optional_formats": [
+              "primary_source_reading",
+              "foc_epic"
+            ],
+            "optional_formats_note": "primary_source_reading optional; foc_epic aspirational only — never default format_mode or length target (not 10800–14400s)",
+            "foc_epic_band_min_s": 10800,
+            "foc_epic_band_max_s": 14400
+          },
+          "compose": {
+            "sfx_density": "none",
+            "beat_interval_s": 0,
+            "overlay_cadence_s": 180,
+            "ken_burns_scale": 1.06,
+            "max_infographic_cards": 8,
+            "sfx_event_cap": 0,
+            "trailer_sfx": false
+          },
+          "hook_pattern": {
+            "default": "false_assumption",
+            "preferred": [
+              "false_assumption",
+              "identity_withheld",
+              "other"
+            ],
+            "avoid": [
+              "ticking_clock",
+              "execution/betrayal"
+            ]
+          },
+          "motion": {
+            "motion_mode": "ken_burns",
+            "pd_clips_count_min": 4,
+            "pd_clips_count_max": 6,
+            "cut_frequency": "low",
+            "animated_maps": false,
+            "motion_graphics": false,
+            "pd_motion_soft": true,
+            "pd_motion_notes": "Soft/slow Ken-Burns-compatible PD pans only (History Calling calm — not action montages)."
+          },
+          "audio": {
+            "ambient_bed_db": -32,
+            "historian_sfx_off": true,
+            "compose_sfx_enabled": false,
+            "voice_mode": "tts_single",
+            "score_mode": "ambient_soft",
+            "ambient_playlist_dir": "assets/audio/ambient",
+            "licensed_score_provider": null,
+            "epidemic_playlist_id": null,
+            "artlist_playlist_id": null
+          }
+        },
+        "voice_cast": {
+          "voice_mode": "tts_single",
+          "speakers": {
+            "narrator": {
+              "kokoro_voice": "am_michael",
+              "human_wav": "assets/voice_cast/historian_narrator.wav",
+              "elevenlabs_id": null
+            },
+            "quote_a": {
+              "kokoro_voice": "am_adam",
+              "human_wav": null,
+              "elevenlabs_id": null
+            },
+            "quote_b": {
+              "kokoro_voice": "af_sarah",
+              "human_wav": null,
+              "elevenlabs_id": null
+            },
+            "source_reader": {
+              "kokoro_voice": "bm_george",
+              "human_wav": null,
+              "elevenlabs_id": null
+            }
+          }
+        },
+        "experiment_lever": {
+          "lever": "hook_pattern",
+          "value": "false_assumption"
+        }
+      },
+      "updated_at": "2026-08-15T07:39:32.871660+00:00",
+      "overrides": {
+        "hook_pattern": {
+          "default": "false_assumption"
+        },
+        "thumbnail_style": {
+          "preset": "historian_soft",
+          "focal_subject": "artifact_or_portrait",
+          "map_vs_face": "artifact",
+          "word_count_max": 4,
+          "text_color": "soft_white",
+          "stroke": "soft_dark",
+          "contrast_boost": 1.05,
+          "mood": "moody_calm",
+          "text_density_est": 0.377,
+          "color_contrast_est": 0.718,
+          "source": "smm_thumb_redesign",
+          "updated_at": "2026-08-15T07:39:32.854928+00:00"
+        },
+        "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.\n- Contrast target≈0.718; keep nocturnal candle key + deep vignette."
+      },
+      "active_experiment": {
+        "lever": "hook_pattern",
+        "value": "false_assumption",
+        "applied_at": "2026-08-15T07:39:32.870144+00:00",
+        "baseline_overrides": {
+          "hook_pattern": {
+            "default": "false_assumption"
+          },
+          "thumbnail_style": {
+            "preset": "historian_soft",
+            "focal_subject": "artifact_or_portrait",
+            "map_vs_face": "artifact",
+            "word_count_max": 4,
+            "text_color": "soft_white",
+            "stroke": "soft_dark",
+            "contrast_boost": 1.05,
+            "mood": "moody_calm",
+            "text_density_est": 0.377,
+            "color_contrast_est": 0.718,
+            "source": "smm_thumb_redesign",
+            "updated_at": "2026-08-15T07:39:32.854928+00:00"
+          },
+          "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.\n- Contrast target≈0.718; keep nocturnal candle key + deep vignette."
+        }
+      }
+    },
+    "art_mysteries": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "quiet_museum_mystery"
+        },
+        "thumbnail_style": {
+          "preset": "museum_masterpiece",
+          "focal_subject": "painting_or_object",
+          "mood": "candlelit_gallery",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "medium",
+          "motion_density": "soft"
+        }
+      },
+      "note": "Staged Wave 1 — activate after expansion gate",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "forgotten_empires": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "collapse_irreversible_stake"
+        },
+        "thumbnail_style": {
+          "preset": "ruin_silhouette",
+          "focal_subject": "ruin_or_seal",
+          "mood": "twilight_empire",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "medium",
+          "motion_density": "map_pans"
+        }
+      },
+      "note": "Staged Wave 1",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "science_history": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "discovery_curiosity"
+        },
+        "thumbnail_style": {
+          "preset": "instrument_notebook",
+          "focal_subject": "instrument",
+          "mood": "archive_lab",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "low",
+          "motion_density": "soft"
+        }
+      },
+      "note": "Staged Wave 1 — medical boundary SOP",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "royal_courts": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "sealed_letter_whisper"
+        },
+        "thumbnail_style": {
+          "preset": "secret_document",
+          "focal_subject": "letter_or_portrait",
+          "mood": "court_dread",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "soft",
+          "motion_density": "historian_calm"
+        }
+      },
+      "note": "Staged Wave 1",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "business_empires": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "rise_and_collapse"
+        },
+        "thumbnail_style": {
+          "preset": "ledger_factory",
+          "focal_subject": "ledger_or_factory",
+          "mood": "industrial_history",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "medium",
+          "infographic_overlays": true,
+          "timeline_overlays": true
+        }
+      },
+      "note": "Staged Wave 2 — overlay SOP required",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "money_history": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "monetary_mystery"
+        },
+        "thumbnail_style": {
+          "preset": "coin_ledger",
+          "focal_subject": "coin_or_ledger",
+          "mood": "archive_finance",
+          "word_count_max": 5
+        },
+        "compose": {
+          "sfx_density": "low",
+          "chart_overlays": true,
+          "disclaimer_required": true
+        }
+      },
+      "note": "Staged Wave 2 — money_history_disclaimer.txt required",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "war_tech_history": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "strategy_logistics"
+        },
+        "thumbnail_style": {
+          "preset": "map_tech_drawing",
+          "focal_subject": "map_or_drawing",
+          "mood": "strategy_doc",
+          "word_count_max": 5,
+          "forbid_gore": true
+        },
+        "compose": {
+          "sfx_density": "medium",
+          "motion_density": "map_pans"
+        }
+      },
+      "note": "Staged Wave 2 — war_tech_policy SOP",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    },
+    "philosophy_sleep": {
+      "overrides": {
+        "hook_pattern": {
+          "default": "soft_wisdom_invite"
+        },
+        "thumbnail_style": {
+          "preset": "candle_scroll",
+          "focal_subject": "scroll_or_bust",
+          "mood": "sleep_calm",
+          "word_count_max": 4,
+          "text_color": "warm_gold"
+        },
+        "compose": {
+          "sfx_density": "very_low",
+          "motion_density": "minimal_sleep"
+        }
+      },
+      "note": "Staged Wave 2 sleep philosophy",
+      "updated_at": "2026-08-10T15:39:02.795850+00:00",
+      "staged": true
+    }
+  }
+}

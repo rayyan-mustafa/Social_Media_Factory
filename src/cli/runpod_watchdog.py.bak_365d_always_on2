@@ -1,0 +1,166 @@
+"""CLI: RunPod capacity watchdog — probe / learn / GREEN-only auto-start.
+
+Usage::
+
+  .venv/bin/python -m src.cli.runpod_watchdog
+  .venv/bin/python -m src.cli.runpod_watchdog --dry-run
+  .venv/bin/python -m src.cli.runpod_watchdog --force-probe
+  .venv/bin/python -m src.cli.runpod_watchdog learn
+  .venv/bin/python -m src.cli.runpod_watchdog crontab --install
+
+Farm is GREEN-light only. YELLOW/RED never start production.
+Sheet-driven: needs approved=TRUE pending ideas. Daily job caps DISABLED.
+Does not re-arm blind sleep_factory farm cron.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import typer
+from rich.console import Console
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.runpod.learn import recompute_availability_learn  # noqa: E402
+from src.runpod.watchdog import (  # noqa: E402
+    install_crontab,
+    install_crontab_hint,
+    run_watchdog_tick,
+)
+
+app = typer.Typer(
+    add_completion=False,
+    help="RunPod capacity watchdog (GREEN-only factory gate)",
+)
+console = Console()
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Probe + decide + learn, but never start a farm job",
+    ),
+    force_probe: bool = typer.Option(
+        False,
+        "--force-probe",
+        help="Ignore next_probe_ts / schedule denseness and probe now",
+    ),
+    skip_learn: bool = typer.Option(
+        False, "--skip-learn", help="Skip heatmap recompute this tick"
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Print full tick JSON"),
+) -> None:
+    """One-shot watchdog tick (default command)."""
+    if ctx.invoked_subcommand is not None:
+        return
+    result = run_watchdog_tick(
+        dry_run=dry_run,
+        force_probe=force_probe,
+        skip_learn=skip_learn,
+    )
+    if json_out:
+        console.print_json(data=result.to_dict())
+    else:
+        color = {
+            "GREEN": "green",
+            "YELLOW": "yellow",
+            "RED": "red",
+        }.get(result.classification or "", "white")
+        console.print(
+            f"[bold]watchdog[/bold] action={result.action}  "
+            f"probed={result.probed}  "
+            f"[{color}]{result.classification or '—'}[/{color}]  "
+            f"started={result.started}  dry_run={result.dry_run}"
+        )
+        console.print(result.message)
+        for r in result.reasons[:8]:
+            console.print(f"  • {r}")
+        if result.learn and not result.learn.get("error"):
+            console.print(
+                f"[dim]learn samples={result.learn.get('sample_count')} "
+                f"suggested primary={result.learn.get('suggested_primary_window_utc')} "
+                f"backup={result.learn.get('suggested_backup_window_utc')}[/dim]"
+            )
+        console.print(
+            "[dim]farm gate: GREEN only — YELLOW/RED never auto-start[/dim]"
+        )
+
+    # Exit: 0 ok/skip, 3 blocked/not green after probe, 4 started failure-ish
+    if result.action == "blocked":
+        raise typer.Exit(3)
+    if result.probed and result.classification == "GREEN" and dry_run:
+        raise typer.Exit(0)
+    if result.action == "disabled":
+        raise typer.Exit(0)
+
+
+@app.command("learn")
+def learn_cmd(
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Recompute availability heatmap + suggested windows from JSONL."""
+    payload = recompute_availability_learn()
+    if json_out:
+        console.print_json(data=payload)
+    else:
+        console.print(
+            f"samples={payload.get('sample_count')} "
+            f"enough={payload.get('enough_samples')} "
+            f"auto_apply={payload.get('learn_auto_apply_env')} "
+            f"applied={payload.get('windows_applied_to_schedule')}"
+        )
+        console.print(
+            f"suggested primary={payload.get('suggested_primary_window_utc')} "
+            f"backup={payload.get('suggested_backup_window_utc')}"
+        )
+        console.print(
+            "[dim]Live schedule overrides only when "
+            "RUNPOD_LEARN_AUTO_APPLY=1 and samples ≥ RUNPOD_LEARN_MIN_SAMPLES[/dim]"
+        )
+
+
+@app.command("crontab")
+def crontab_cmd(
+    install: bool = typer.Option(
+        False,
+        "--install",
+        help="Arm watchdog cron only (does NOT enable blind sleep_factory farm)",
+    ),
+) -> None:
+    """Print or install watchdog crontab (GREEN-gated autonomy)."""
+    hint = install_crontab_hint()
+    console.print(hint)
+    console.print(
+        "[yellow]Note:[/yellow] sleep_factory farm cron stays DISARMED. "
+        "This installs watchdog-gated GREEN-only auto-start only."
+    )
+    if install:
+        path = install_crontab()
+        console.print(f"[green]Installed[/green] → {path}")
+        # Verify sleep_factory beat is not live-armed by us
+        import subprocess
+
+        proc = subprocess.run(
+            ["crontab", "-l"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        live = proc.stdout or ""
+        for ln in live.splitlines():
+            if "sleep_factory beat" in ln and not ln.strip().startswith("#"):
+                console.print(
+                    "[red]WARNING[/red] live sleep_factory beat line still armed — "
+                    "comment it out; farm must be watchdog-gated GREEN-only"
+                )
+
+
+if __name__ == "__main__":
+    app()

@@ -1,0 +1,16 @@
+# COLD OPEN / FIRST 15–30s HOOK — Invention Archives (science_history)
+# Title promise is a contract. Calm documentary pull.
+
+TITLE-PROMISE RULE (non-negotiable):
+- Open on the title claim / unanswered question immediately.
+- First 5–10 seconds MUST prove the title was NOT clickbait.
+- Title tokens appear early in the cold open.
+
+Cold-open structure:
+1) Pattern interrupt (0–5s): concrete image locked to the title — curiosity of discovery — title promise in first breath; past-tense science only.
+2) Curiosity gap (by ~15–20s): unanswered historical question.
+3) Stake (by ~25–35s): why this mattered — then invite deeper.
+
+Tone: history of science & invention — instruments, notebooks, labs (historical, NOT medical advice)
+
+Avoid scream What-If trailer energy unless channel is explicitly alternate-history.

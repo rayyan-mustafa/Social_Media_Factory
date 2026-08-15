@@ -1,0 +1,28 @@
+{
+  "channel": "business_empires",
+  "brand": "Empire of Commerce",
+  "production_enabled": false,
+  "videos_per_month_start": 8,
+  "titles": [
+    "How Standard Oil Built a Pipe Empire",
+    "The East India Company Monopoly That Ate States",
+    "Ford vs GM: The Assembly Line War",
+    "Why the South Sea Bubble Still Echoes",
+    "The Railroad Barons and the Rate Wars",
+    "How a Trading Post Became a Corporate State",
+    "The Collapse of a Gilded Age Trust",
+    "Why Carnegie Sold and What He Kept",
+    "The Shipping Line That Bet on Steam Too Late",
+    "How Sears Catalogued a Continent",
+    "The Oil Crash That Emptied a Company Town",
+    "Rival Newspaper Empires and the Circulation Wars",
+    "Why the Medici Bank Needed God and Interest",
+    "The Factory Fire That Rewrote Liability",
+    "How a Patent Pool Locked Out Competitors",
+    "The Airline That Grew From Airmail Contracts",
+    "Why Vertical Integration Became a Weapon",
+    "The Soft Drink Wars Before the Billboard Age",
+    "How a Mining Syndicate Mapped a Nation's Debt",
+    "The Department Store That Invented the Credit Book"
+  ]
+}

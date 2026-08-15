@@ -1,0 +1,16 @@
+Create a cinematic 16:9 YouTube thumbnail for **Forgotten Empires**.
+
+Concept lock — ruin silhouette / cracked seal / map edge — one empire emblem as focal
+One dominant historical object or figure; never collage grid.
+Museum-grade detail, Rembrandt key light, deep shadows, high mobile CTR readability.
+
+Composition: Rule of Thirds; 35–45% clean dark negative space for title text.
+Gold or high-contrast serif title zone only — no random burned-in words.
+
+Avoid:
+No modern logos, UI, phones, neon.
+No fresh gore, torture spectacle, or graphic violence.
+No cartoon/anime, no bright flat lighting.
+
+Channel: forgotten_empires
+Variables: [HISTORICAL FIGURE], [MYSTERY OBJECT], [EXPRESSION], [BACKGROUND], [GOLD_TEXT_LINE]

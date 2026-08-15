@@ -1,0 +1,134 @@
+{
+  "timezone": "Asia/Karachi",
+  "timezone_note": "Per-channel local hours in Asia/Karachi (PKT=UTC+5). napstorian default 04:00 PKT (=23:00 UTC prior calendar day). napping_historian default 06:00 PKT (=01:00 UTC).",
+  "publish_hour_local": 18,
+  "publish_minute_local": 0,
+  "frequency_locked": true,
+  "frequency_lock_source": "rayyan_fixed_15_per_month",
+  "frequency_lock_note": "videos_per_month_target=15 and cadence_days=2 are FIXED for BOTH channels. CEO/SMM competitor train may update preferred_hours only \u2014 never cadence, monthly target, or weekly_publics_target.",
+  "cadence_days": 2,
+  "buffer_target": 15,
+  "idea_stock_target": 15,
+  "human_approve_first_n": 15,
+  "smm_can_propose_hour": true,
+  "smm_min_videos_before_hour_propose": 2,
+  "smm_hour_soft_max_delta": 3,
+  "smm_hour_always_accept": true,
+  "smm_hour_always_accept_note": "SMM/CEO preferred_hours writes apply to BOTH napstorian and napping_historian with soft=False. CEO learns competitor upload hours only. Frequency (15/mo, cadence_days=2) is Rayyan-locked.",
+  "ceo_competitor_schedule": true,
+  "ceo_competitor_schedule_note": "ceo_smm_beat refreshes competitor metrics for both channels, then writes preferred_hours from best_upload_hours_local. Does NOT write cadence_days or videos_per_month_target when frequency_locked.",
+  "require_public_approved_for_all": true,
+  "videos_per_month_target": 15,
+  "channels": {
+    "napstorian": {
+      "publish_hour_local": 18,
+      "preferred_hours": [
+        18
+      ],
+      "note": "04:00 PKT / 23:00 UTC (previous calendar evening UTC). Legacy factory default. Frequency locked 15/mo.",
+      "preferred_hours_updated_at": "2026-08-15T07:11:52.620895+00:00",
+      "preferred_hours_source": "smm_eval_always_accept",
+      "frequency_locked": true,
+      "cadence_days": 2,
+      "cadence_updated_at": "2026-08-10T10:44:00.000000+00:00",
+      "cadence_source": "rayyan_fixed_15_per_month",
+      "videos_per_month_target": 15
+    },
+    "napping_historian": {
+      "publish_hour_local": 7,
+      "preferred_hours": [
+        7
+      ],
+      "note": "06:00 PKT / 01:00 UTC. Frequency locked 15/mo.",
+      "preferred_hours_updated_at": "2026-08-15T07:14:37.267370+00:00",
+      "preferred_hours_source": "smm_eval_always_accept",
+      "frequency_locked": true,
+      "cadence_days": 2,
+      "cadence_updated_at": "2026-08-10T10:44:00.000000+00:00",
+      "cadence_source": "rayyan_fixed_15_per_month",
+      "videos_per_month_target": 15
+    },
+    "art_mysteries": {
+      "preferred_hours": [
+        23,
+        22,
+        0
+      ],
+      "publish_hour_local": 23,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.061148+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "forgotten_empires": {
+      "preferred_hours": [
+        22,
+        23,
+        1
+      ],
+      "publish_hour_local": 22,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.062578+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "science_history": {
+      "preferred_hours": [
+        18,
+        22,
+        23
+      ],
+      "publish_hour_local": 18,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.064053+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "royal_courts": {
+      "preferred_hours": [
+        23,
+        22,
+        0
+      ],
+      "publish_hour_local": 23,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.065324+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "business_empires": {
+      "preferred_hours": [
+        22,
+        23,
+        0
+      ],
+      "publish_hour_local": 22,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.066745+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "money_history": {
+      "preferred_hours": [
+        17,
+        16,
+        23
+      ],
+      "publish_hour_local": 17,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.068407+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "war_tech_history": {
+      "preferred_hours": [
+        23,
+        22,
+        0
+      ],
+      "publish_hour_local": 23,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.069648+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    },
+    "philosophy_sleep": {
+      "preferred_hours": [
+        23,
+        22,
+        0
+      ],
+      "publish_hour_local": 23,
+      "preferred_hours_updated_at": "2026-08-15T07:06:09.070924+00:00",
+      "preferred_hours_source": "ceo_competitor_upload_hours"
+    }
+  },
+  "cadence_updated_at": "2026-08-10T10:44:00.000000+00:00",
+  "cadence_source": "rayyan_fixed_15_per_month"
+}

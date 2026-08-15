@@ -1,0 +1,70 @@
+{
+  "updated": "2026-08-10",
+  "default_still_backend": "flux_runpod",
+  "reject": [
+    "meta_cookie_n8n_enter",
+    "adobe_cookie_n8n_enter",
+    "paid_firefly_api_farm_default"
+  ],
+  "ladder": [
+    "live_vod_loop",
+    "flux_cinematic_2d",
+    "code_infographics_2d",
+    "toon_illustrated_optional",
+    "adobe_express_manual_thumbs",
+    "blender_open3d_accent"
+  ],
+  "pd_clip_sources": "config/pd_clip_sources.json",
+  "pd_clippings": {
+    "enabled": true,
+    "status": "wiki_met_primary_flux_on_reject",
+    "notes": "BOTH channels: Wiki+Met PD/OA first (keyword stage up to 30 → vision_judge). PASS → scene hero. REJECT / no candidate → Flux fill. Target 20–30 heroes (mid 25, hard cap 30). Never reuse weak PD. Napstorian: 10–15 PD motion; historian: 4–6 soft pans."
+  },
+  "profiles": {
+    "cinematic": {
+      "enabled": true,
+      "backend": "flux_runpod",
+      "prompt_suffix": "cinematic realism, volumetric light, film still, historically grounded, no modern text artifacts"
+    },
+    "pd_clippings": {
+      "enabled": true,
+      "backend": "public_domain_open",
+      "config": "config/pd_clip_sources.json",
+      "module": "src.services.pd_clippings",
+      "notes": "Wiki+Met primary (asset_fetcher keyword + curated fetch). vision_judge PASS only; Flux = reject/gap filler. Stamp commercial_ok/source_url/license."
+    },
+    "infographic": {
+      "enabled": true,
+      "backend": "code_overlay",
+      "module": "src.services.visual_modalities",
+      "notes": "PIL chapter/mid-beat cards → FFmpeg overlay. Netflix density ~every 60–90s (COMPOSE_INFOGRAPHIC_MAX_CARDS=20, TARGET_INTERVAL_S=75)."
+    },
+    "premium_overlays_v1": {
+      "enabled": true,
+      "backend": "code_overlay",
+      "module": "src.services.premium_overlays",
+      "notes": "Ken Burns + text plates + map arrows + fog drift + year stamp + progress rail + lower-thirds + quote/letter + History-vs-What-If + cold-open title + pulse/vignette/letterbox. COMPOSE_PREMIUM_OVERLAYS=1. Channel tone: napstorian sharp / napping_historian calm."
+    },
+    "toonbee": {
+      "enabled": false,
+      "backend": "flux_runpod",
+      "prompt_suffix": "clean flat illustration, bold shapes, limited palette, storybook history panel, not photoreal"
+    },
+    "adobe_manual": {
+      "enabled": false,
+      "backend": "human_export",
+      "assets_dir": "assets/adobe_manual",
+      "notes": "Human Express/Firefly free exports only"
+    },
+    "blender_3d": {
+      "enabled": false,
+      "backend": "blender_headless",
+      "notes": "Post-Live spike: short orbits/turntables composited over stills"
+    }
+  },
+  "live_policy": {
+    "own_content_only": true,
+    "prefer_longform_over_shorts": true,
+    "min_duration_sec": 180
+  }
+}

@@ -1,0 +1,296 @@
+"""Schedule Agent — alternate-day publishAt in audience timezone (PKT 04:00)."""
+
+from __future__ import annotations
+
+import json
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Any
+from zoneinfo import ZoneInfo
+
+from src.agents.ledger import OpsLedger
+from src.agents.store import OpsStore
+from src.agents.title_queue import TitleQueue
+from src.services.settings import CONFIG_DIR, get_settings
+
+logger = logging.getLogger(__name__)
+
+
+class ScheduleAgentError(RuntimeError):
+    pass
+
+
+class ScheduleAgent:
+    """Assign YouTube publishAt slots: every other day at 04:00 Asia/Karachi (PKT)."""
+
+    def __init__(
+        self,
+        store: OpsStore | None = None,
+        ledger: OpsLedger | None = None,
+        queue: TitleQueue | None = None,
+    ):
+        self.store = store or OpsStore()
+        self.ledger = ledger or OpsLedger(self.store)
+        self.queue = queue or TitleQueue()
+        self.s = get_settings()
+        self.cfg = _load_schedule_config()
+
+    @property
+    def tz(self) -> ZoneInfo:
+        name = (
+            getattr(self.s, "publish_timezone", None)
+            or self.cfg.get("timezone")
+            or "Asia/Karachi"
+        )
+        return ZoneInfo(str(name))
+
+    @property
+    def publish_hour(self) -> int:
+        override = getattr(self.s, "publish_hour_local", None)
+        if override is not None and str(override) != "":
+            try:
+                return int(override)
+            except (TypeError, ValueError):
+                pass
+        # SMM-approved global hour from benchmarks
+        bench = self.store.get_benchmarks()
+        if bench.get("publish_hour_approved"):
+            try:
+                return int(bench["publish_hour_approved"])
+            except (TypeError, ValueError):
+                pass
+        return int(self.cfg.get("publish_hour_local") or 4)
+
+    @property
+    def cadence_days(self) -> int:
+        return int(
+            getattr(self.s, "publish_cadence_days", None)
+            or self.cfg.get("cadence_days")
+            or 2
+        )
+
+    def pkt_to_eastern_note(self) -> str:
+        """Document PKT 04:00 vs America/New_York (EST/EDT)."""
+        sample = datetime(2026, 1, 15, 4, 0, tzinfo=ZoneInfo("Asia/Karachi"))
+        ny = sample.astimezone(ZoneInfo("America/New_York"))
+        return (
+            f"04:00 Asia/Karachi (PKT) == {ny.strftime('%H:%M %Z')} America/New_York "
+            f"on {ny.date()} (EST≈18:00 / EDT≈19:00 previous evening)"
+        )
+
+    def next_slot(
+        self, *, after: datetime | None = None, existing: list[datetime] | None = None
+    ) -> datetime:
+        """Next free alternate-day 04:00 local slot as timezone-aware datetime."""
+        minute = int(self.cfg.get("publish_minute_local") or 0)
+        hour = self.publish_hour
+        tz = self.tz
+        now_local = (after or datetime.now(timezone.utc)).astimezone(tz)
+        # First candidate: today at publish hour if still in future, else tomorrow
+        cand = now_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if cand <= now_local:
+            cand += timedelta(days=1)
+
+        taken = {
+            e.astimezone(tz).date()
+            for e in (existing or self._existing_scheduled_datetimes())
+        }
+        # Align to cadence grid from first taken or from cand
+        while cand.date() in taken:
+            cand += timedelta(days=1)
+
+        # If we already have scheduled dates, keep alternate-day spacing from latest
+        scheduled = sorted(self._existing_scheduled_datetimes())
+        if scheduled:
+            latest = scheduled[-1].astimezone(tz)
+            min_next = latest + timedelta(days=self.cadence_days)
+            min_next = min_next.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if cand < min_next:
+                cand = min_next
+            while cand.date() in taken:
+                cand += timedelta(days=self.cadence_days)
+
+        return cand
+
+    def can_arm_schedule(
+        self, *, job_id: str | None = None, public_approved: bool
+    ) -> tuple[bool, str]:
+        """All videos this month require public_approved (default n=15)."""
+        n = int(self.cfg.get("human_approve_first_n") or 15)
+        if self.cfg.get("require_public_approved_for_all", True) and not public_approved:
+            return False, f"public_approved required (all {n} videos this month)"
+        if not public_approved:
+            approved_count = sum(
+                1
+                for j in self.store.list_jobs()
+                if j.status in ("scheduled", "public")
+            )
+            if approved_count < n:
+                return False, f"public_approved required ({approved_count}/{n})"
+        return True, "ok"
+
+    def assign_slot_for_job(
+        self,
+        *,
+        job_id: str,
+        video_id: str,
+        public_approved: bool,
+        dry_run: bool = False,
+        apply_youtube: bool = True,
+    ) -> dict[str, Any]:
+        ok, reason = self.can_arm_schedule(job_id=job_id, public_approved=public_approved)
+        if not ok:
+            self.ledger.write(
+                agent="schedule",
+                problem=f"cannot arm schedule for {job_id}",
+                action=reason,
+                job_id=job_id,
+                severity="warn",
+                publish_status="private",
+                extra={"video_id": video_id},
+            )
+            return {"ok": False, "reason": reason, "video_id": video_id}
+
+        slot_local = self.next_slot()
+        slot_utc = slot_local.astimezone(timezone.utc)
+        publish_at_iso = slot_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        yt_ok = None
+        if apply_youtube and not dry_run:
+            try:
+                from src.services.publish_youtube import PublishModule
+
+                PublishModule().schedule_publish_at(video_id, publish_at_iso)
+                yt_ok = True
+            except Exception as exc:  # noqa: BLE001
+                yt_ok = False
+                self.ledger.write(
+                    agent="schedule",
+                    problem=f"YouTube publishAt failed: {exc}",
+                    action="kept private — retry schedule later",
+                    job_id=job_id,
+                    severity="error",
+                    extra={"video_id": video_id, "publish_at": publish_at_iso},
+                )
+                return {
+                    "ok": False,
+                    "reason": str(exc),
+                    "scheduled_at_local": slot_local.isoformat(),
+                    "publish_at_utc": publish_at_iso,
+                    "video_id": video_id,
+                }
+
+        self.store.update_job(
+            job_id,
+            status="scheduled",
+            stage="scheduled",
+            video_id=video_id,
+            meta={
+                **((self.store.get_job(job_id).meta if self.store.get_job(job_id) else {}) or {}),
+                "scheduled_at_local": slot_local.isoformat(),
+                "publish_at_utc": publish_at_iso,
+                "timezone": str(self.tz),
+            },
+        )
+        row = self.queue.find_by_job_id(job_id)
+        if row:
+            self.queue.update_row(
+                row.row_index,
+                status="scheduled",
+                video_id=video_id,
+                scheduled_at=slot_local.isoformat(),
+                channel=getattr(row, "channel", None) or None,
+            )
+
+        self.ledger.write(
+            agent="schedule",
+            problem=f"armed publishAt {publish_at_iso}",
+            action=f"slot {slot_local.isoformat()} ({self.tz})",
+            job_id=job_id,
+            severity="info",
+            publish_status="scheduled",
+            extra={
+                "video_id": video_id,
+                "pkt_vs_ny": self.pkt_to_eastern_note(),
+                "youtube_updated": yt_ok,
+            },
+        )
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "video_id": video_id,
+            "scheduled_at_local": slot_local.isoformat(),
+            "publish_at_utc": publish_at_iso,
+            "timezone": str(self.tz),
+            "pkt_vs_ny": self.pkt_to_eastern_note(),
+            "dry_run": dry_run,
+        }
+
+    def status(self) -> dict[str, Any]:
+        existing = self._existing_scheduled_datetimes()
+        nxt = self.next_slot(existing=existing)
+        return {
+            "timezone": str(self.tz),
+            "publish_hour_local": self.publish_hour,
+            "cadence_days": self.cadence_days,
+            "human_approve_first_n": self.cfg.get("human_approve_first_n"),
+            "require_public_approved_for_all": self.cfg.get(
+                "require_public_approved_for_all", True
+            ),
+            "buffer_target": self.cfg.get("buffer_target"),
+            "buffer_count": self.queue.count_buffer(),
+            "scheduled_count": len(existing),
+            "next_slot_local": nxt.isoformat(),
+            "pkt_vs_ny": self.pkt_to_eastern_note(),
+        }
+
+    def apply_approved_hour_override(self, hour: int) -> dict[str, Any]:
+        """Set global publish hour after Sheet publish_hour_approved."""
+        hour = int(hour)
+        if hour < 0 or hour > 23:
+            raise ScheduleAgentError("hour must be 0-23")
+        bench = self.store.get_benchmarks()
+        bench["publish_hour_approved"] = hour
+        bench["publish_hour_proposed"] = hour
+        self.store.save_benchmarks(bench)
+        self.ledger.write(
+            agent="schedule",
+            problem=f"publish hour set to {hour}:00 {self.tz}",
+            action="future slots use new hour",
+            severity="info",
+        )
+        return {"publish_hour_local": hour, "timezone": str(self.tz)}
+
+    def _existing_scheduled_datetimes(self) -> list[datetime]:
+        out: list[datetime] = []
+        for row in self.queue.list_rows():
+            if row.scheduled_at:
+                try:
+                    dt = datetime.fromisoformat(row.scheduled_at.replace("Z", "+00:00"))
+                    out.append(dt)
+                except ValueError:
+                    continue
+        for job in self.store.list_jobs():
+            raw = (job.meta or {}).get("scheduled_at_local") or (job.meta or {}).get(
+                "publish_at_utc"
+            )
+            if not raw:
+                continue
+            try:
+                out.append(datetime.fromisoformat(str(raw).replace("Z", "+00:00")))
+            except ValueError:
+                continue
+        return out
+
+
+def _load_schedule_config() -> dict[str, Any]:
+    path = CONFIG_DIR / "publish_schedule.json"
+    if not path.exists():
+        return {
+            "timezone": "Asia/Karachi",
+            "publish_hour_local": 4,
+            "cadence_days": 2,
+            "human_approve_first_n": 15,
+            "require_public_approved_for_all": True,
+        }
+    return json.loads(path.read_text(encoding="utf-8"))

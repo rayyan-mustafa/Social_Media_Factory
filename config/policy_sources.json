@@ -1,0 +1,62 @@
+{
+  "max_policy_age_hours": 12,
+  "sources": [
+    {
+      "id": "community_guidelines",
+      "url": "https://www.youtube.com/howyoutubeworks/policies/community-guidelines/",
+      "label": "Community Guidelines"
+    },
+    {
+      "id": "spam_deceptive",
+      "url": "https://support.google.com/youtube/answer/2801973",
+      "label": "Spam / deceptive practices"
+    },
+    {
+      "id": "reused_content",
+      "url": "https://support.google.com/youtube/answer/1311392",
+      "label": "Reused / repetitious content (YPP)"
+    },
+    {
+      "id": "misinfo_manipulated",
+      "url": "https://support.google.com/youtube/answer/10835034",
+      "label": "Misinformation / manipulated media"
+    },
+    {
+      "id": "ai_disclosure",
+      "url": "https://support.google.com/youtube/answer/14328491",
+      "label": "Disclosing GenAI / altered content"
+    },
+    {
+      "id": "tos",
+      "url": "https://www.youtube.com/static?template=terms",
+      "label": "YouTube Terms of Service"
+    },
+    {
+      "id": "how_yt_works",
+      "url": "https://www.youtube.com/howyoutubeworks/",
+      "label": "How YouTube Works"
+    }
+  ],
+  "topic_allowlist": [
+    "history",
+    "what if",
+    "tudor",
+    "alternate history",
+    "folklore",
+    "myth",
+    "documentary",
+    "england",
+    "medieval",
+    "renaissance"
+  ],
+  "seed_rules": [
+    "ai_disclosure",
+    "no_real_person_abuse",
+    "no_misleading_thumb_title",
+    "originality",
+    "topic_allowlist",
+    "music_license",
+    "made_for_kids",
+    "advertiser_friendly"
+  ]
+}

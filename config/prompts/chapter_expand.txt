@@ -1,0 +1,113 @@
+# =============================================================================
+# CHAPTER EXPANSION PROMPT — EDIT THIS FILE FREELY
+# ScriptModule expands ONE chapter per call using this template.
+# Comments on their own lines starting with # are stripped.
+# Placeholders in {{DOUBLE_BRACES}} are filled at runtime.
+# =============================================================================
+
+Write a full, long-form YouTube narration block for ONE section of a historical
+"What If" documentary, based on the provided 10-section outline.
+
+Video Topic / Title: {{TITLE}}
+Video hook: {{HOOK}}
+Full outline (context only): {{OUTLINE_JSON}}
+
+Expand THIS section only:
+Section id: {{CHAPTER_ID}}
+Section title: {{CHAPTER_TITLE}}
+Section goal: {{CHAPTER_GOAL}}
+Key points: {{KEY_POINTS}}
+Target sentence/beat count for this section: {{TARGET_SENTENCES}}
+Pacing phase for this section: {{PACING_PHASE}}
+Pacing rules: {{PACING_RULES}}
+
+Already covered in prior sections (do NOT repeat these beats — advance the timeline):
+{{COVERED_BEATS}}
+
+Retention narrative rules:
+- First chapter (Hook) — TITLE PROMISE: open on the title claim / What-If /
+  irreversible stake in the FIRST breath. First 5–10s must prove the title was
+  not clickbait (same entity + fork + tension). Pattern interrupt + curiosity
+  gap + "why this matters tonight" by ~30s — do NOT spoil the whole answer.
+  Open with stakes + mystery + one concrete image locked to the title —
+  NOT "the year is…" three times / throat-clearing.
+- Each chapter should end with an open loop; the next chapter pays it off.
+- Anti-recap: never re-establish facts already stated in prior chapters.
+- Tone: calm but gripping — sleepy pacing without sleepy content.
+- Mark ~1 beat per 3 minutes as beat_type "interrupt" (pattern interrupt) in JSON when appropriate.
+- Once per video (chapters ~5–7 only): include ONE beat with beat_type "reengage" —
+  1–2 short documentary sentences asking the viewer a thoughtful question
+  ("So ask yourself…"). Calm tone only — never "hey guys" / CTA slang.
+  Do not use reengage in other chapters; Community Question (ch 10) stays separate.
+
+Overall pacing reference:
+- Atmospheric, steady, and calm (~150 WPM feel).
+- Factory runtime target for the whole video: ~{{TARGET_DURATION_MIN}} minutes.
+- This section's beats: ~{{WORDS_MIN}}–{{WORDS_MAX}} words each (target ~{{WORDS_TARGET}}),
+  ≈ {{TARGET_SECONDS_PER_SCENE}} seconds of TTS per beat.
+
+Channel visual style hint (keep every visual_prompt compatible): {{STYLE_HINT}}
+
+Tone & Style Instructions:
+- Sensory Detail: Do not just state facts. Describe the feeling of the scene —
+  the smell of old parchment, the cold stone of the Tower of London, the
+  flickering of beeswax candles, the heavy silence of a royal bedchamber.
+- "Sleepy" Narration: Prefer calm, flowing phrasing. Avoid sharp, aggressive
+  words. Aim for deeply immersive — like a high-end history audiobook that still
+  grips the listener (calm but gripping, not boring).
+- The "Human" Element: Focus on emotions and physical health of the figures —
+  e.g. the pain of Henry the Eighth's leg, the anxiety in Anne Boleyn's private letters
+  (when the topic supports it).
+- Human-like voice-over: use "..." for natural pauses, and use clear punctuation
+  (commas, periods, em dashes) so TTS breathes and stresses correctly.
+- Roman numerals in speech: never say "VIII", "III", etc. Write the English number
+  words instead (e.g. Henry the Eighth, Edward the Sixth, Louis the Fourteenth).
+- No Modern Slang: Formal yet accessible Documentary voice. No "Hey guys,"
+  "Like and subscribe," "Mind-blowing," or high-energy YouTube tropes.
+- Smooth Transitions: Open and close this section with soft Bridge Statements
+  that maintain mystery and keep the listener hooked without being loud.
+- Show, Don't Tell: instead of "He was sick," prefer something like
+  "The labored breathing and the pale, waxy complexion of a king in decline."
+
+Hard constraints (gallery factory — do not ignore):
+- Write exactly about {{TARGET_SENTENCES}} spoken beats for THIS section (small variance ok).
+- Each beat: ~{{WORDS_MIN}}–{{WORDS_MAX}} words (target ~{{WORDS_TARGET}}),
+  aimed at ~{{TARGET_SECONDS_PER_SCENE}} seconds of TTS.
+- One beat = one visual scene. Obey {{PACING_PHASE}} rules above
+  (Phase A = short sentences; Phase B = one long flowing paragraph per beat).
+- Plain spoken English. No stage directions, no [brackets], no speaker labels.
+- The "text" field is ONLY what the narrator speaks aloud. NEVER put camera moves, shot lists,
+  zooms, "final visual", "slow zoom", "wide shot", or painting-as-direction in text.
+- Put ALL visual/camera direction ONLY in visual_prompt — never in text.
+- If the outline closer looks like a shot list, convert it to a spoken closing question in text
+  and move the visual description into visual_prompt for the final beat.
+- Every beat needs a concrete visual_prompt for a 1280x720 still that matches STYLE_HINT.
+- visual_prompt: describe a PAINTERLY historical DIGITAL ILLUSTRATION of the beat
+  (museum-quality / cinematic academic history plate — faces and costumes readable).
+  Period costume, architecture, warm golden key light on faces (NOT pure backlight),
+  ultra detailed faces + expressive emotion, realistic fabric texture.
+  NEVER ask for silhouettes, featureless crowds, sunset-backlit armies, or blank faces.
+  Explicitly avoid photoreal DSLR / live-action camera language.
+- Prefer one clear focal subject; small supporting crowds OK if composition stays readable.
+- No stickman, whiteboard, cartoon, flat vector, modern clothing, smartphones, or anachronisms.
+- No text-in-image, no letters, no watermarks, no logos.
+- Name recurring figures clearly (e.g. "King Henry VIII", "Anne Boleyn", "cardinal", "guards")
+  so character locks can keep appearance consistent across scenes.
+- Do not invent copyrighted character likenesses or real private individuals outside
+  the historical public figures required by the topic.
+
+Return STRICT JSON (no markdown fences) with this shape:
+{
+  "chapter_id": {{CHAPTER_ID}},
+  "sentences": [
+    {
+      "text": "Short spoken sentence here.",
+      "visual_prompt": "still image of ...",
+      "beat_type": ""
+    }
+  ]
+}
+
+beat_type values: "" | "interrupt" | "reengage" (reengage at most once in the whole video).
+
+Write ONLY this section's sentences. No preamble.

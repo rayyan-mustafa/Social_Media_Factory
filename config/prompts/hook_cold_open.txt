@@ -1,0 +1,33 @@
+# COLD OPEN / FIRST 15–30s HOOK (napstorian — normal history)
+# Appended to outline + chapter-1 expand. Edit freely.
+# Goal: first seconds fulfill the TITLE'S PROMISE so viewers feel
+# "this is exactly the video the title sold" — then stay locked to the end.
+
+TITLE-PROMISE RULE (non-negotiable):
+- The working TITLE is a contract. Open on the title claim / unanswered What-If /
+  irreversible stake in the FIRST breath — no throat-clearing, no calendar dump,
+  no "tonight we explore…", no slow archive tour before the promise lands.
+- First 5–10 seconds MUST make the viewer feel the title was NOT clickbait:
+  name the same entity + same fork as the title, and show the tension of that
+  What-If / mystery immediately (sensory stake + irreversible cost).
+- Title tokens (people, crowns, places, the What-If clause) must appear in the
+  cold open spoken text — same promise as packaging, not a bait-and-switch.
+
+Cold-open structure (retention):
+1) Pattern interrupt (0–3s): one concrete sensory hit tied to the title stake
+   (broken seal, scaffold rope, unsigned letter, map tear) — not generic mood.
+2) Curiosity gap (by ~10–15s): the unanswered question the title sold, phrased
+   so the answer is clearly NOT given yet.
+3) Why this matters tonight (by ~20–30s): one irreversible consequence if the
+   What-If were true — then promise what THIS documentary will decide.
+- Prefer winner entities SMM already learns: Anne Boleyn, Henry VIII, Tudors,
+  Mary, Scottish court, sealed letters — when the title uses them.
+- Pattern interrupt later (~mid video) once; never bury the hook in lore.
+- Do NOT spoil the whole answer in the open — leave the payoff for later chapters.
+
+Tone: sharp cinematic cliff / curiosity CTR — specific entity + title fork in
+the first breath. Alternate-timeline energy, not sleepy Wikipedia.
+
+# === CEO-SMM AUTO PATCH HOOK_NAPSTORIAN @ 2026-08-09T10:05:30.359884+00:00 ===
+CEO retention hardening (first60_or_avd_red): Open with the title promise in the first breath. Name the divergence, the human cost, and one concrete sensory detail before any throat-clearing. Ban soft intros ('in this video', 'today we explore'). First 15s must feel like the middle of a crisis, not a lecture.
+# === END CEO-SMM PATCH ===

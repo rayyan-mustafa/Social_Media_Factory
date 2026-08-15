@@ -1,0 +1,5 @@
+# Own public VOD concat playlist for napstorian 24/7 loop.
+# FFmpeg concat demuxer format. One absolute path per line:
+#   file '/home/ubuntu/new_yt_automation/path/to/own_vod.mp4'
+# Default ambient placeholder is auto-created by `python -m src.cli.vod_loop smoke`
+# if this file is empty / missing. Replace with your own public VODs only.

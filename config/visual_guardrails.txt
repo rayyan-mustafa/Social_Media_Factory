@@ -1,0 +1,139 @@
+# =============================================================================
+# VISUAL GUARDRAILS — Masterpiece historical cinematic painting
+# Target look: detailed academic/concept-art history plates (faces, costume,
+# architecture readable) — NOT silhouette sunset posters.
+# =============================================================================
+
+[NEGATIVE]
+photograph, DSLR photo, camera snapshot, live action footage, film grain photo,
+octane render, unreal engine, cgi screenshot, 3d render, disney 3d, pixar,
+smooth plastic skin, poreless cgi face, video game cutscene,
+plastic CGI look, oversaturated neon, cyberpunk, sci-fi HUD, UI overlay,
+stickman, stick figure, whiteboard, chalkboard, flat vector, cartoon, anime,
+comic panel, storyboard, cel shading, clipart, emoji style,
+low detail, blurry face, deformed face, featureless face, blank face,
+extra limbs, extra fingers, melted hands,
+modern clothing, hoodie, sneakers, jeans, t-shirt, smartphone, laptop, modern pen,
+watermark, logo, signature, text overlay, subtitle, caption, title text,
+letters, words, writing, typography, readable text on signs, OCR text,
+nsfw, gore, blood splatter, explicit,
+busy collage, multi-panel, split screen, picture-in-picture,
+empty black frame, blank image, solid color frame, underexposed void,
+pitch black void, pure black background, unreadable dark frame,
+silhouette only, pure silhouette, backlit silhouette army, featureless crowd,
+black blob figures, crushed blacks, near-black underexposure,
+lens flare sun disk dominating frame, overexposed white void,
+stock photo watermark, shallow DOF bokeh photograph,
+tiny distant stick figures, anonymous mass of riders with no faces
+
+[STRIP]
+photograph
+dslr
+live action footage
+film grain photo
+octane render
+unreal engine
+3d render
+disney 3d
+pixar
+video game cutscene
+cgi face
+stickman
+stick man
+stick figure
+whiteboard
+chalkboard
+flat vector
+flat 2d vector
+line art
+ultra-simplified geometric
+bright white stickman
+white stickman
+white-on-black
+educational whiteboard
+explainer aesthetic
+cartoon
+anime
+comic panel
+storyboard
+cel shading
+clipart
+neon glow
+glowing orange icon
+smartphone
+iphone
+laptop
+hoodie
+sneakers
+modern pen
+ballpoint pen
+pure silhouette
+silhouette army
+silhouette only
+featureless crowd
+black blob
+
+[FACE_BOOST]
+ultra detailed readable face, classical portrait lighting on the face,
+expressive emotion in eyes and mouth, historically accurate hair and features,
+museum-quality facial detail, no silhouette face, no blank featureless face
+
+[HAND_BOOST]
+period-accurate detailed hands and costume accessories,
+holding quill parchment handkerchief sword or reins as scene requires,
+no melted fingers, no extra digits, hands secondary to face and costume
+
+[REWRITE]
+photograph of => masterpiece historical digital painting of
+DSLR photo of => museum-quality historical illustration of
+movie still of => cinematic historical digital painting of
+photorealistic portrait of => masterpiece historical digital painting of
+bright white stickman => historically costumed noble with detailed face
+stickman whiteboard still of => masterpiece historical digital painting of
+stickman flat vector of => museum-quality historical illustration of
+whiteboard still of => cinematic historical painting of
+2D storybook still of => classical academic historical painting of
+flat vector illustration of => highly detailed historical digital painting of
+educational explainer of => epic historical scene painting of
+pitch-black empty scene => warmly lit historical interior with clear detailed subject
+solid dark void => sunlit historical courtyard with visible detailed figure
+dimly lit oil painting of => warmly side-lit masterpiece painting of
+dimly lit => warmly side-lit with readable midtones
+a shadowy figure => a cloaked noble with detailed face under warm side light
+shadowy royal chamber => torchlit royal chamber with readable faces and costumes
+shadowy illustration of => detailed historical painting with readable lighting of
+in the shadows of a dimly lit => beside a warm side-lit
+in the shadows of => near
+shrouded in darkness => partially veiled, face still fully detailed and readable
+candlelit scene of => warm candlelit scene with clear midtones and detailed faces of
+in a shadowy => in a warmly lit
+pitch-black => softly shadowed but detailed
+silhouette of => detailed figure of
+silhouettes of => detailed figures of
+silhouette army => small focused cavalry group with readable faces and armor under warm side light
+against the setting sun => under warm golden daylight with faces and armor clearly lit from the side
+against the sun => under warm golden side light with visible facial detail
+backlit army => side-lit period army with detailed costumes and readable faces
+vast army of silhouettes => focused squadron of period soldiers, detailed faces and armor, elegant composition
+hundreds of riders => a clear foreground group of riders with detailed faces, soft crowd beyond
+many people crowd chaos => small historically dressed crowd, one clear focal subject with detailed face
+split screen => single unified cinematic historical painting
+comic panel => single museum-quality historical illustration
+detailed black-dot eyes => expressive ultra detailed human eyes
+glowing orange icon => warm painted torchlight or candle flame
+modern black pen => feather quill and brass inkwell
+ballpoint pen => quill pen
+shallow depth of field => painted atmospheric depth
+bokeh background => soft painted background
+
+[APPEND_RULES]
+masterpiece historical digital painting, cinematic realism, museum-quality illustration,
+classical academic painting combined with modern concept art, soft painterly brushstrokes,
+realistic anatomy, historically accurate clothing and architecture with visible fabric texture,
+muted earthy color palette, warm golden daylight as KEY LIGHT on faces (not pure backlight),
+volumetric atmosphere without erasing detail, atmospheric perspective, subtle dust in the air,
+elegant composition, ultra detailed faces, expressive emotions, realistic textures,
+painterly finish, sharp focus on focal figures, epic historical scene,
+faces costumes and props must be clearly readable — NEVER silhouette-only,
+prefer one clear focal subject or a small detailed group in the foreground,
+no text letters logos watermarks, 1280x720 16:9

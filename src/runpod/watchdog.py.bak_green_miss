@@ -1,0 +1,1265 @@
+"""Capacity-driven production watchdog — probe → learn → GREEN-only auto-start.
+
+Cron-friendly one-shot: each invocation decides whether to probe, updates the
+availability heatmap, and may start **one** production farm job when GREEN.
+
+Hard rule (CTO): factory GPU starts only on GREEN. YELLOW/RED never enqueue
+visuals. Blind ``sleep_factory`` farm cron stays DISARMED; this watchdog is the gate.
+
+Phase split (CTO 2026-08-07):
+  - Phase A (anytime / RED-YELLOW OK, or while GPU busy): script+Kokoro → ``ready_for_stills``
+  - Phase B (GREEN only): prefer parked voice-ready jobs → stills→compose→publish
+  - GREEN with no prep buffer: fall back to full pipeline (use the window)
+  - Locks: ``MAX_GPU_CONCURRENT=1`` (never 2 pods) + ``MAX_PREP_CONCURRENT=1``
+    with ``RUNPOD_PREP_WHILE_GPU=1`` so prep can bank voice while stills run
+    (pod ``visuals`` only — not during local script/TTS/compose)
+
+Sheet-driven (CTO 2026-08-07): while Excel/sheet has ideas with approved=TRUE
+(ready), keep producing 1-by-1 GPU jobs whenever capacity is GREEN.
+No soft/hard daily *job count* caps — CostGuardian $ ceilings still apply.
+Always re-probe the traffic light before each start. After success → short
+cooldown → eligible for next if still GREEN + more pending ideas.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import random
+import threading
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Literal
+
+from src.runpod.capacity import (
+    CapacityBenchmarkResult,
+    check_farm_capacity_green,
+    evaluate_schedule,
+    run_capacity_benchmark,
+)
+from src.runpod.cost_log import utcnow_iso
+from src.runpod.learn import recompute_availability_learn
+from src.services.settings import ROOT
+
+logger = logging.getLogger(__name__)
+
+STATE_PATH: Path = ROOT / "output" / "ops" / "runpod_watchdog_state.json"
+LAST_TICK_PATH: Path = ROOT / "output" / "ops" / "runpod_watchdog_last.json"
+_LOCK = threading.Lock()
+
+WatchdogAction = Literal[
+    "disabled",
+    "skip_probe_not_due",
+    "probed_no_start",
+    "started_job",
+    "prepped_voice",
+    "dry_run",
+    "blocked",
+]
+
+
+def _env_truthy(name: str, default: str = "0") -> bool:
+    raw = (os.getenv(name) or default).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _settings():
+    try:
+        from src.services.settings import get_settings
+
+        return get_settings()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def watchdog_enabled() -> bool:
+    if "RUNPOD_WATCHDOG" in os.environ:
+        return _env_truthy("RUNPOD_WATCHDOG", "1")
+    s = _settings()
+    if s is not None:
+        return bool(getattr(s, "runpod_watchdog", True))
+    return True
+
+
+def auto_start_enabled() -> bool:
+    if "RUNPOD_AUTO_START" in os.environ:
+        return _env_truthy("RUNPOD_AUTO_START", "1")
+    s = _settings()
+    if s is not None:
+        return bool(getattr(s, "runpod_auto_start", True))
+    return True
+
+
+def auto_max_jobs_per_day() -> int:
+    """Optional emergency soft daily job-count brake. **0 = DISABLED** (default).
+
+    Sheet-driven production: no daily job count caps. CostGuardian still applies.
+    """
+    if "RUNPOD_AUTO_MAX_JOBS_PER_DAY" in os.environ:
+        return max(0, _env_int("RUNPOD_AUTO_MAX_JOBS_PER_DAY", 0))
+    s = _settings()
+    if s is not None:
+        return max(0, int(getattr(s, "runpod_auto_max_jobs_per_day", 0) or 0))
+    return 0
+
+
+def auto_max_jobs_per_day_hard() -> int:
+    """Optional emergency hard daily job-count brake. **0 = DISABLED** (default).
+
+    When both soft and hard are 0, daily job counts never block auto-start.
+    If either is set >0, that positive value acts as a ceiling (hard ≥ soft).
+    """
+    soft = auto_max_jobs_per_day()
+    if "RUNPOD_AUTO_MAX_JOBS_PER_DAY_HARD" in os.environ:
+        hard = max(0, _env_int("RUNPOD_AUTO_MAX_JOBS_PER_DAY_HARD", 0))
+    else:
+        s = _settings()
+        hard = (
+            max(0, int(getattr(s, "runpod_auto_max_jobs_per_day_hard", 0) or 0))
+            if s is not None
+            else 0
+        )
+    if soft <= 0 and hard <= 0:
+        return 0  # both disabled
+    if hard <= 0:
+        return soft  # only soft set → use as ceiling
+    return max(soft, hard)
+
+
+def daily_job_caps_disabled() -> bool:
+    return auto_max_jobs_per_day_hard() <= 0
+
+
+def opportunistic_enabled() -> bool:
+    """Chain after success while GREEN + pending ideas (default on)."""
+    if "RUNPOD_AUTO_OPPORTUNISTIC" in os.environ:
+        return _env_truthy("RUNPOD_AUTO_OPPORTUNISTIC", "1")
+    s = _settings()
+    if s is not None:
+        return bool(getattr(s, "runpod_auto_opportunistic", True))
+    return True
+
+
+def prep_voice_enabled() -> bool:
+    """Phase A: script+TTS prep on RED/YELLOW (default on)."""
+    if "RUNPOD_PREP_VOICE" in os.environ:
+        return _env_truthy("RUNPOD_PREP_VOICE", "1")
+    return True
+
+
+def prep_voice_max() -> int:
+    """Max parked ``ready_for_stills`` jobs to bank ahead of GREEN."""
+    return max(0, _env_int("RUNPOD_PREP_VOICE_MAX", 1))
+
+
+def prep_while_gpu() -> bool:
+    """Allow Phase A while a GPU job holds the pod (default on)."""
+    if "RUNPOD_PREP_WHILE_GPU" in os.environ:
+        return _env_truthy("RUNPOD_PREP_WHILE_GPU", "1")
+    try:
+        from src.agents.farm import prep_while_gpu_enabled
+
+        return prep_while_gpu_enabled()
+    except Exception:  # noqa: BLE001
+        return True
+
+
+def max_prep_concurrent_env() -> int:
+    return max(0, _env_int("MAX_PREP_CONCURRENT", 1))
+
+
+def max_gpu_concurrent_env() -> int:
+    return max(1, _env_int("MAX_GPU_CONCURRENT", 1))
+
+
+def job_cooldown_min() -> int:
+    """Minutes between farm starts. Default 3 — prefer ASAP after success if GREEN."""
+    return max(0, _env_int("RUNPOD_AUTO_JOB_COOLDOWN_MIN", 3))
+
+
+def opportunistic_min_green_streak() -> int:
+    """Consecutive GREEN probes required before chaining next job.
+
+    Default 1: this tick's probe is GREEN is enough (we always re-probe).
+    """
+    return max(1, _env_int("RUNPOD_AUTO_OPPORTUNISTIC_MIN_GREEN_STREAK", 1))
+
+
+def opportunistic_min_stock() -> str:
+    """Min Community stockStatus for chain jobs: Low|Medium|High."""
+    raw = (os.getenv("RUNPOD_AUTO_OPPORTUNISTIC_MIN_STOCK") or "Low").strip()
+    return raw.upper() or "LOW"
+
+
+_STOCK_RANK = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3}
+
+
+def probe_interval_in_window_min() -> int:
+    # Align with */10 cron beat (production gate every 10 min).
+    return max(1, _env_int("RUNPOD_PROBE_INTERVAL_IN_WINDOW_MIN", 10))
+
+
+def probe_interval_out_window_min() -> int:
+    # Same 10-min beat outside windows — catch GREEN; probes are free.
+    return max(1, _env_int("RUNPOD_PROBE_INTERVAL_OUT_WINDOW_MIN", 10))
+
+
+def probe_out_window_jitter_min() -> int:
+    """Half-range jitter (±) for out-of-window interval (minutes). Default 0."""
+    return max(0, _env_int("RUNPOD_PROBE_OUT_WINDOW_JITTER_MIN", 0))
+
+
+def expected_probes_per_day() -> dict[str, Any]:
+    """Documented estimate for ops (GraphQL only — $0, no pods)."""
+    in_m = probe_interval_in_window_min()
+    out_base = probe_interval_out_window_min()
+    # With */10 cadence ~144 probes/day if always due; still $0 GraphQL.
+    in_hours = 7.0
+    out_hours = 17.0
+    in_probes = in_hours * (60.0 / in_m)
+    out_probes = out_hours * (60.0 / out_base)
+    return {
+        "in_window_interval_min": in_m,
+        "out_window_interval_min_nominal": out_base,
+        "out_window_range_min": [
+            max(1, out_base - probe_out_window_jitter_min()),
+            out_base + probe_out_window_jitter_min(),
+        ],
+        "assumed_window_hours_per_day": in_hours,
+        "assumed_out_hours_per_day": out_hours,
+        "est_probes_in_window": round(in_probes, 1),
+        "est_probes_out_window": round(out_probes, 1),
+        "est_probes_per_day_total": round(in_probes + out_probes, 1),
+        "cron_recommended": "*/10",
+        "note": (
+            "Probes are GraphQL stock checks only (no pod create). "
+            "Daily job-count caps DISABLED; CostGuardian $ ceilings limit spend. "
+            "Sheet approved=TRUE ideas gate production."
+        ),
+        "daily_job_caps_disabled": daily_job_caps_disabled(),
+        "soft_jobs_per_day": auto_max_jobs_per_day(),
+        "hard_jobs_per_day": auto_max_jobs_per_day_hard(),
+        "opportunistic": opportunistic_enabled(),
+        "job_cooldown_min": job_cooldown_min(),
+    }
+
+
+@dataclass
+class WatchdogState:
+    last_probe_ts: str | None = None
+    next_probe_ts: str | None = None
+    auto_starts_utc_date: str = ""
+    auto_starts_today: int = 0
+    last_classification: str | None = None
+    last_decision: str | None = None
+    last_action: str | None = None
+    last_job_id: str | None = None
+    last_start_ts: str | None = None
+    last_success_job_id: str | None = None
+    last_success_ts: str | None = None
+    green_streak: int = 0
+    updated_at_utc: str | None = None
+
+    @classmethod
+    def load(cls, path: Path | None = None) -> WatchdogState:
+        src = path or STATE_PATH
+        if not src.exists():
+            return cls()
+        try:
+            data = json.loads(src.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return cls()
+        if not isinstance(data, dict):
+            return cls()
+        return cls(
+            last_probe_ts=data.get("last_probe_ts"),
+            next_probe_ts=data.get("next_probe_ts"),
+            auto_starts_utc_date=str(data.get("auto_starts_utc_date") or ""),
+            auto_starts_today=int(data.get("auto_starts_today") or 0),
+            last_classification=data.get("last_classification"),
+            last_decision=data.get("last_decision"),
+            last_action=data.get("last_action"),
+            last_job_id=data.get("last_job_id"),
+            last_start_ts=data.get("last_start_ts"),
+            last_success_job_id=data.get("last_success_job_id"),
+            last_success_ts=data.get("last_success_ts"),
+            green_streak=int(data.get("green_streak") or 0),
+            updated_at_utc=data.get("updated_at_utc"),
+        )
+
+    def save(self, path: Path | None = None) -> Path:
+        dest = path or STATE_PATH
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        self.updated_at_utc = utcnow_iso()
+        payload = asdict(self)
+        with _LOCK:
+            dest.write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        return dest
+
+
+@dataclass
+class WatchdogTickResult:
+    at: str
+    action: WatchdogAction
+    probed: bool
+    in_window: bool
+    classification: str | None = None
+    decision: str | None = None
+    message: str = ""
+    started: bool = False
+    dry_run: bool = False
+    job_id: str | None = None
+    pick: list[dict[str, Any]] = field(default_factory=list)
+    learn: dict[str, Any] | None = None
+    harvest: dict[str, Any] | None = None
+    prep: dict[str, Any] | list[dict[str, Any]] | None = None
+    finance: dict[str, Any] | None = None
+    repair: dict[str, Any] | list[dict[str, Any]] | None = None
+    pending_ready: int = 0
+    voice_ready: int = 0
+    state: dict[str, Any] = field(default_factory=dict)
+    reasons: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def _parse_ts(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _utc_date(now: datetime) -> str:
+    return now.astimezone(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _roll_daily_counter(state: WatchdogState, now: datetime) -> WatchdogState:
+    today = _utc_date(now)
+    if state.auto_starts_utc_date != today:
+        state.auto_starts_utc_date = today
+        state.auto_starts_today = 0
+        # Keep last_success for chain across midnight if recent (decide uses 12h window).
+    return state
+
+
+def compute_next_probe_at(
+    *,
+    now: datetime,
+    in_window: bool,
+    rng: random.Random | None = None,
+) -> datetime:
+    """Schedule next probe: dense in-window, jittered out-of-window."""
+    rng = rng or random.Random()
+    if in_window:
+        delta = timedelta(minutes=probe_interval_in_window_min())
+    else:
+        base = probe_interval_out_window_min()
+        jitter = probe_out_window_jitter_min()
+        lo = max(1, base - jitter)
+        hi = max(lo, base + jitter)
+        delta = timedelta(minutes=rng.randint(lo, hi))
+    return now + delta
+
+
+def probe_is_due(
+    state: WatchdogState,
+    *,
+    now: datetime | None = None,
+    force: bool = False,
+) -> tuple[bool, str]:
+    if force:
+        return True, "force_probe"
+    now = now or datetime.now(timezone.utc)
+    next_at = _parse_ts(state.next_probe_ts)
+    if next_at is None:
+        return True, "no_next_probe_scheduled"
+    if now >= next_at:
+        return True, f"next_probe_due ({state.next_probe_ts})"
+    return False, f"probe_not_due until {state.next_probe_ts}"
+
+
+def cooldown_elapsed(
+    state: WatchdogState,
+    *,
+    now: datetime,
+    cooldown_minutes: int | None = None,
+) -> tuple[bool, str]:
+    cd = job_cooldown_min() if cooldown_minutes is None else cooldown_minutes
+    if cd <= 0:
+        return True, "cooldown disabled"
+    last = _parse_ts(state.last_start_ts)
+    if last is None:
+        return True, "no prior start"
+    ready_at = last + timedelta(minutes=cd)
+    if now >= ready_at:
+        return True, f"cooldown ok (≥{cd}m since last start)"
+    remain = int((ready_at - now).total_seconds() // 60) + 1
+    return False, f"cooldown {remain}m left (need {cd}m between jobs)"
+
+
+def chain_reprobe_due(
+    state: WatchdogState,
+    *,
+    now: datetime,
+) -> tuple[bool, str]:
+    """After a success, don't idle — re-probe ASAP once cooldown elapsed."""
+    if not opportunistic_enabled():
+        return False, "chain after success off (RUNPOD_AUTO_OPPORTUNISTIC=0)"
+    hard = auto_max_jobs_per_day_hard()
+    if hard > 0 and state.auto_starts_today >= hard:
+        return False, f"optional hard daily cap reached ({hard})"
+    if not state.last_success_ts:
+        return False, "no recent success"
+    succ = _parse_ts(state.last_success_ts)
+    if succ is None:
+        return False, "invalid success ts"
+    # Allow chain across UTC midnight if success was recent (within 12h).
+    age_h = (now - succ).total_seconds() / 3600.0
+    if age_h > 12:
+        return False, "success too old for chain wake"
+    ok_cd, cd_msg = cooldown_elapsed(state, now=now)
+    if not ok_cd:
+        return False, cd_msg
+    return True, "post-success chain window — re-probe for next job"
+
+
+# Back-compat alias
+opportunistic_reprobe_due = chain_reprobe_due
+
+
+def best_community_stock(bench: CapacityBenchmarkResult | None) -> str | None:
+    """Best Community stockStatus among available levels (HIGH/MEDIUM/LOW)."""
+    if bench is None:
+        return None
+    best: str | None = None
+    best_rank = -1
+    for lv in bench.levels or []:
+        cloud = str(getattr(lv, "cloud_type", "") or "").upper()
+        if cloud != "COMMUNITY":
+            continue
+        if not getattr(lv, "available", False):
+            continue
+        status = str(getattr(lv, "stock_status", "") or "").strip().upper()
+        rank = _STOCK_RANK.get(status, 0)
+        if rank > best_rank:
+            best_rank = rank
+            best = status
+    return best
+
+
+def community_stock_meets_min(
+    bench: CapacityBenchmarkResult | None,
+    *,
+    min_stock: str | None = None,
+) -> tuple[bool, str]:
+    need = (min_stock or opportunistic_min_stock()).upper()
+    need_rank = _STOCK_RANK.get(need, 1)
+    best = best_community_stock(bench)
+    if best is None:
+        return False, "no Community stock available"
+    if _STOCK_RANK.get(best, 0) >= need_rank:
+        return True, f"Community stock={best} (≥{need})"
+    return False, f"Community stock={best} below min {need}"
+
+
+def notify_farm_success(
+    job_id: str,
+    *,
+    state_path: Path | None = None,
+    now: datetime | None = None,
+) -> WatchdogState:
+    """Called when a farm job finishes successfully — unlocks next-job chain.
+
+    Schedules an early re-probe after cooldown so we start ASAP if still GREEN.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    else:
+        now = now.astimezone(timezone.utc)
+    state = _roll_daily_counter(WatchdogState.load(state_path), now)
+    state.last_success_job_id = job_id
+    state.last_success_ts = now.isoformat()
+    # Wake soon after cooldown for next job (if GREEN + pending ideas).
+    wake = now + timedelta(minutes=max(0, job_cooldown_min()) or 1)
+    cur_next = _parse_ts(state.next_probe_ts)
+    if cur_next is None or wake < cur_next:
+        state.next_probe_ts = wake.isoformat()
+    state.save(state_path)
+    logger.info(
+        "watchdog: farm success job=%s — chain wake at %s",
+        job_id,
+        state.next_probe_ts,
+    )
+    return state
+
+
+def _smoke_gate_ok() -> tuple[bool, str]:
+    try:
+        from src.runpod.guards import farm_may_use_runpod_pod_stills
+
+        return farm_may_use_runpod_pod_stills()
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
+def _concurrent_busy() -> tuple[bool, str]:
+    """GPU lock only — prep jobs must not block GREEN visuals starts."""
+    try:
+        from src.agents.farm import count_gpu_jobs, count_inflight_jobs, max_gpu_concurrent
+
+        gpu_n = count_gpu_jobs()
+        inflight = count_inflight_jobs()
+        max_g = max_gpu_concurrent()
+        if gpu_n >= max_g or inflight >= max_g:
+            return True, (
+                f"gpu_lock busy gpu={gpu_n} inflight={inflight} "
+                f">= max_gpu={max_g}"
+            )
+        return False, f"gpu={gpu_n} inflight={inflight} max_gpu={max_g}"
+    except Exception as exc:  # noqa: BLE001
+        return True, f"concurrent check failed: {exc}"
+
+
+def _budget_ok() -> tuple[bool, str]:
+    try:
+        from src.agents.cost_guardian import CostGuardian
+
+        return CostGuardian().check_can_start_job()
+    except Exception as exc:  # noqa: BLE001
+        return False, f"budget check failed: {exc}"
+
+
+def _pending_ideas_ok() -> tuple[bool, str, int]:
+    """Sheet gate: only produce when approved=TRUE + policy_ok + queued ideas exist."""
+    try:
+        from src.agents.title_queue import TitleQueue
+
+        q = TitleQueue()
+        n = q.count_pending_ready()
+        if n <= 0:
+            return False, "no pending sheet ideas (approved=TRUE + queued)", 0
+        return True, f"pending_ready={n}", n
+    except Exception as exc:  # noqa: BLE001
+        return False, f"sheet pending check failed: {exc}", 0
+
+
+def decide_auto_start(
+    *,
+    classification: str,
+    auto_start: bool,
+    dry_run: bool,
+    auto_starts_today: int = 0,
+    soft_cap: int = 0,
+    hard_cap: int = 0,
+    smoke_ok: bool,
+    smoke_msg: str,
+    concurrent_busy: bool,
+    concurrent_msg: str,
+    budget_ok: bool,
+    budget_msg: str,
+    pending_ok: bool = True,
+    pending_msg: str = "",
+    opportunistic: bool = True,
+    has_success_today: bool = False,
+    cooldown_ok: bool = True,
+    cooldown_msg: str = "",
+    green_streak: int = 0,
+    min_green_streak: int = 1,
+    stock_ok: bool = True,
+    stock_msg: str = "",
+) -> tuple[bool, list[str]]:
+    """Pure decision — GREEN only; sheet-driven; daily job caps optional (0=off).
+
+    While pending approved ideas remain: start 1 job when GREEN + idle + budget
+    + cooldown. Always requires a fresh classification from this tick's probe.
+    """
+    reasons: list[str] = []
+    cls = (classification or "").upper()
+    if cls != "GREEN":
+        reasons.append(f"classification={cls or 'None'} (farm green-light only)")
+        return False, reasons
+    if not auto_start:
+        reasons.append("RUNPOD_AUTO_START=0")
+        return False, reasons
+    if dry_run:
+        reasons.append("dry_run — would start if all gates pass")
+        return False, reasons
+    if not pending_ok:
+        reasons.append(pending_msg or "no pending sheet ideas")
+        return False, reasons
+    # Optional emergency brakes only (0 = DISABLED — sheet-driven default).
+    ceiling = hard_cap if hard_cap > 0 else (soft_cap if soft_cap > 0 else 0)
+    if ceiling > 0 and auto_starts_today >= ceiling:
+        reasons.append(
+            f"optional daily job ceiling reached ({auto_starts_today}>={ceiling})"
+        )
+        return False, reasons
+    if not smoke_ok:
+        reasons.append(f"smoke gate closed: {smoke_msg}")
+        return False, reasons
+    if concurrent_busy:
+        reasons.append(f"job already running: {concurrent_msg}")
+        return False, reasons
+    if not budget_ok:
+        reasons.append(f"budget blocked: {budget_msg}")
+        return False, reasons
+    if not cooldown_ok:
+        reasons.append(cooldown_msg or "cooldown active")
+        return False, reasons
+    if green_streak < min_green_streak:
+        reasons.append(
+            f"need {min_green_streak} consecutive GREEN probes "
+            f"(have {green_streak})"
+        )
+        return False, reasons
+    if not stock_ok:
+        reasons.append(stock_msg or "Community stock below min")
+        return False, reasons
+
+    # Chain after first start requires opportunistic (default on).
+    if auto_starts_today > 0 and not opportunistic:
+        reasons.append(
+            "RUNPOD_AUTO_OPPORTUNISTIC=0 — refusing chain after prior start today"
+        )
+        return False, reasons
+
+    # Optional ceiling mode: require success before 2nd+ when a ceiling is set.
+    if (
+        opportunistic
+        and auto_starts_today > 0
+        and not has_success_today
+        and ceiling > 0
+    ):
+        reasons.append(
+            "need a successful job today before next under optional daily ceiling"
+        )
+        return False, reasons
+
+    label = "sheet-driven" if auto_starts_today <= 0 else "chain"
+    return True, [
+        f"GREEN {label} start "
+        f"(today={auto_starts_today + 1}; caps={'off' if ceiling <= 0 else ceiling}) "
+        f"streak={green_streak} {pending_msg} {stock_msg}".strip()
+    ]
+
+
+def _decision_kwargs(
+    *,
+    classification: str,
+    dry_run: bool,
+    state: WatchdogState,
+    now: datetime,
+    smoke_ok: bool,
+    smoke_msg: str,
+    busy: bool,
+    busy_msg: str,
+    budget_ok: bool,
+    budget_msg: str,
+    pending_ok: bool,
+    pending_msg: str,
+    bench: CapacityBenchmarkResult | None,
+) -> dict[str, Any]:
+    soft = auto_max_jobs_per_day()
+    hard = auto_max_jobs_per_day_hard()
+    ok_cd, cd_msg = cooldown_elapsed(state, now=now)
+    ok_stock, stock_msg = community_stock_meets_min(bench)
+    succ = _parse_ts(state.last_success_ts)
+    # Success within last 12h counts for chain (not strict UTC-day).
+    has_success = False
+    if succ is not None:
+        has_success = (now - succ).total_seconds() <= 12 * 3600
+    return {
+        "classification": classification,
+        "auto_start": auto_start_enabled(),
+        "dry_run": dry_run,
+        "auto_starts_today": state.auto_starts_today,
+        "soft_cap": soft,
+        "hard_cap": hard,
+        "smoke_ok": smoke_ok,
+        "smoke_msg": smoke_msg,
+        "concurrent_busy": busy,
+        "concurrent_msg": busy_msg,
+        "budget_ok": budget_ok,
+        "budget_msg": budget_msg,
+        "pending_ok": pending_ok,
+        "pending_msg": pending_msg,
+        "opportunistic": opportunistic_enabled(),
+        "has_success_today": has_success,
+        "cooldown_ok": ok_cd,
+        "cooldown_msg": cd_msg,
+        "green_streak": state.green_streak,
+        "min_green_streak": opportunistic_min_green_streak(),
+        "stock_ok": ok_stock,
+        "stock_msg": stock_msg,
+    }
+
+
+def _start_one_visuals_job() -> tuple[bool, str | None, list[dict[str, Any]], str]:
+    """Phase B: resume oldest ready_for_stills job (GREEN-gated via spawn)."""
+    from src.agents.farm import list_ready_for_stills, spawn_farm_job, voice_artifacts_ready
+
+    ready = list_ready_for_stills()
+    if not ready:
+        return False, None, [], "no ready_for_stills jobs"
+    job = ready[0]
+    if not voice_artifacts_ready(job.job_dir):
+        return (
+            False,
+            job.id,
+            [],
+            f"ready_for_stills job {job.id} missing script/voice artifacts",
+        )
+    spawned = spawn_farm_job(job.id, phase="visuals")
+    results = [{"job_id": job.id, "pipeline": spawned, "farm_phase": "visuals"}]
+    if not spawned.get("ok"):
+        return False, job.id, results, str(spawned.get("error") or "visuals spawn failed")
+    if spawned.get("already_running"):
+        return False, job.id, results, f"job {job.id} already running"
+    if spawned.get("spawned"):
+        return True, job.id, results, f"started visuals job_id={job.id}"
+    return False, job.id, results, f"visuals spawn no-op for {job.id}"
+
+
+def _start_one_farm_job() -> tuple[bool, str | None, list[dict[str, Any]], str]:
+    """Call the same pick_and_enqueue path as production (max 1).
+
+    Prefers Phase B (parked voice) when available; else full pipeline pick.
+    """
+    from src.agents.farm import count_ready_for_stills
+    from src.agents.title_queue import TitleQueue
+    from src.agents.worker import pick_and_enqueue
+
+    voice_n = count_ready_for_stills()
+    if voice_n > 0:
+        return _start_one_visuals_job()
+
+    inv = TitleQueue().inventory_approved()
+    for r in inv["skipped_have_job_id"]:
+        logger.info(
+            "watchdog SKIP have_job_id channel=%s row=%s job_id=%s title=%r",
+            r.channel,
+            r.row_index,
+            r.job_id,
+            r.title,
+        )
+    for r in inv["ready"][:12]:
+        logger.info(
+            "watchdog READY empty_job_id channel=%s row=%s title=%r",
+            r.channel,
+            r.row_index,
+            r.title,
+        )
+    logger.info(
+        "watchdog pick inventory ready=%d skipped_have_job_id=%d",
+        len(inv["ready"]),
+        len(inv["skipped_have_job_id"]),
+    )
+
+    results = pick_and_enqueue(limit=1, enqueue_pipeline=True, max_concurrent=1)
+    if not results:
+        return False, None, results, "pick returned empty (no approved titles?)"
+    first = results[0]
+    if first.get("error"):
+        return False, None, results, str(first.get("error"))
+    job_id = first.get("job_id")
+    pipe = first.get("pipeline") or {}
+    if isinstance(pipe, dict) and pipe.get("ok") is False:
+        return False, job_id, results, str(pipe.get("error") or "spawn failed")
+    status = str(first.get("status") or "")
+    if status in {
+        "already_enqueued",
+        "already_published",
+        "already_done",
+        "blocked_failed_hold",
+        "skip_has_job_id",
+        "hold",
+        "deferred",
+    }:
+        return False, job_id, results, f"pick status={status}: {first.get('note') or first.get('error') or ''}"
+    if job_id:
+        return True, str(job_id), results, f"started job_id={job_id}"
+    return False, None, results, "pick completed without job_id"
+
+
+def _maybe_prep_voice(*, dry_run: bool = False) -> dict[str, Any] | None:
+    """Phase A anytime — bank script+TTS; may overlap one GPU job (no 2nd pod)."""
+    if not prep_voice_enabled() or prep_voice_max() <= 0:
+        return {"skipped": True, "reason": "RUNPOD_PREP_VOICE disabled"}
+    if dry_run:
+        return {"skipped": True, "reason": "dry_run"}
+    try:
+        from src.agents.farm import (
+            count_gpu_jobs,
+            count_prep_jobs,
+            count_ready_for_stills,
+            prep_slot_available,
+        )
+        from src.agents.worker import prep_voice_jobs
+
+        ready_n = count_ready_for_stills()
+        if ready_n >= prep_voice_max():
+            return {
+                "skipped": True,
+                "reason": "prep buffer full",
+                "ready_for_stills": ready_n,
+            }
+        ok_prep, prep_msg = prep_slot_available()
+        if not ok_prep:
+            return {
+                "skipped": True,
+                "reason": prep_msg,
+                "prep": count_prep_jobs(),
+                "gpu": count_gpu_jobs(),
+            }
+        results = prep_voice_jobs(limit=1, max_ready=prep_voice_max())
+        return {
+            "results": results,
+            "ready_for_stills": count_ready_for_stills(),
+            "prep": count_prep_jobs(),
+            "gpu": count_gpu_jobs(),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("watchdog prep_voice failed: %s", exc)
+        return {"error": str(exc)[:300]}
+
+
+def run_watchdog_tick(
+    *,
+    dry_run: bool = False,
+    force_probe: bool = False,
+    skip_learn: bool = False,
+    skip_harvest: bool = False,
+    client: Any = None,
+    now: datetime | None = None,
+    state_path: Path | None = None,
+    rng: random.Random | None = None,
+) -> WatchdogTickResult:
+    """One cron tick: maybe probe, learn, harvest refill, GREEN-only auto-start."""
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    else:
+        now = now.astimezone(timezone.utc)
+
+    state = _roll_daily_counter(WatchdogState.load(state_path), now)
+    in_window, window_label, schedule_advice = evaluate_schedule(now=now)
+
+    if not watchdog_enabled() and not force_probe:
+        finance_payload = _maybe_finance_recheck(dry_run=dry_run)
+        result = WatchdogTickResult(
+            at=utcnow_iso(),
+            action="disabled",
+            probed=False,
+            in_window=in_window,
+            message="RUNPOD_WATCHDOG=0",
+            dry_run=dry_run,
+            finance=finance_payload,
+            reasons=["watchdog disabled"],
+            state=asdict(state),
+        )
+        _write_last(result)
+        return result
+
+    # Idea-stock refill (publish on OR ≥1 public-path title; stock < ~15/sheet)
+    harvest_payload: dict[str, Any] | None = None
+    if not skip_harvest:
+        try:
+            from src.agents.idea_stock import maybe_refill_idea_stock
+
+            harvest_payload = maybe_refill_idea_stock(dry_run=dry_run)
+        except Exception as exc:  # noqa: BLE001
+            harvest_payload = {"error": str(exc)[:300]}
+            logger.warning("watchdog harvest refill failed: %s", exc)
+
+    # Transient prep/script JSON failures — requeue same job_id (no remake).
+    repair_payload = _maybe_repair_script_json(dry_run=dry_run)
+
+    due, due_reason = probe_is_due(state, now=now, force=force_probe)
+    if not due:
+        chain_due, chain_reason = chain_reprobe_due(state, now=now)
+        if chain_due:
+            due, due_reason = True, chain_reason
+    if not due:
+        pending_ok, pending_msg, pending_n = _pending_ideas_ok()
+        voice_ready = 0
+        try:
+            from src.agents.farm import count_ready_for_stills
+
+            voice_ready = count_ready_for_stills()
+        except Exception:  # noqa: BLE001
+            pass
+        prep_payload = _maybe_prep_voice(dry_run=dry_run)
+        prep_started = False
+        prep_job_id = None
+        if isinstance(prep_payload, dict):
+            for item in prep_payload.get("results") or []:
+                pipe = item.get("pipeline") or {}
+                if pipe.get("spawned") and pipe.get("job_id"):
+                    prep_started = True
+                    prep_job_id = pipe.get("job_id")
+                    break
+        finance_payload = _maybe_finance_recheck(dry_run=dry_run)
+        result = WatchdogTickResult(
+            at=utcnow_iso(),
+            action="prepped_voice" if prep_started else "skip_probe_not_due",
+            probed=False,
+            in_window=in_window,
+            message=(
+                f"prep spawned job={prep_job_id}"
+                if prep_started
+                else due_reason
+            ),
+            dry_run=dry_run,
+            classification=state.last_classification,
+            decision=state.last_decision,
+            harvest=harvest_payload,
+            prep=prep_payload,
+            finance=finance_payload,
+            repair=repair_payload,
+            pending_ready=pending_n,
+            voice_ready=voice_ready,
+            job_id=str(prep_job_id) if prep_job_id else None,
+            started=False,  # CPU Phase A — not a GREEN GPU start
+            reasons=[
+                due_reason,
+                schedule_advice if not in_window else f"in {window_label}",
+                pending_msg,
+                f"voice_ready={voice_ready}",
+            ],
+            state=asdict(state),
+        )
+        state.last_action = result.action
+        state.save(state_path)
+        _write_last(result)
+        return result
+
+    # --- Probe (GraphQL only; no pod create) ---
+    ok_green, green_msg, bench = check_farm_capacity_green(
+        client=client, log_jsonl=True
+    )
+    if bench is None:
+        bench = run_capacity_benchmark(client=client, allow_secure_flag=False)
+
+    assert isinstance(bench, CapacityBenchmarkResult)
+    classification = bench.classification
+    decision = bench.decision
+
+    if classification == "GREEN":
+        state.green_streak = int(state.green_streak or 0) + 1
+    else:
+        state.green_streak = 0
+
+    state.last_probe_ts = utcnow_iso()
+    state.next_probe_ts = compute_next_probe_at(
+        now=now, in_window=in_window, rng=rng
+    ).isoformat()
+    state.last_classification = classification
+    state.last_decision = decision
+
+    learn_payload: dict[str, Any] | None = None
+    if not skip_learn:
+        try:
+            learn_payload = recompute_availability_learn(now=now)
+        except Exception as exc:  # noqa: BLE001
+            learn_payload = {"error": str(exc)[:300]}
+            logger.warning("watchdog learn failed: %s", exc)
+
+    smoke_ok, smoke_msg = _smoke_gate_ok()
+    busy, busy_msg = _concurrent_busy()
+    budget_ok, budget_msg = _budget_ok()
+    pending_ok, pending_msg, pending_n = _pending_ideas_ok()
+    voice_ready = 0
+    try:
+        from src.agents.farm import count_ready_for_stills
+
+        voice_ready = count_ready_for_stills()
+    except Exception:  # noqa: BLE001
+        pass
+    # GREEN may start Phase B even when no new sheet ideas remain.
+    pending_ok_for_start = pending_ok or voice_ready > 0
+    pending_msg_for_start = (
+        pending_msg
+        if pending_ok
+        else (f"voice_ready={voice_ready}" if voice_ready > 0 else pending_msg)
+    )
+
+    decide_kw = _decision_kwargs(
+        classification=classification,
+        dry_run=dry_run,
+        state=state,
+        now=now,
+        smoke_ok=smoke_ok,
+        smoke_msg=smoke_msg,
+        busy=busy,
+        busy_msg=busy_msg,
+        budget_ok=budget_ok,
+        budget_msg=budget_msg,
+        pending_ok=pending_ok_for_start,
+        pending_msg=pending_msg_for_start,
+        bench=bench,
+    )
+    should_start, reasons = decide_auto_start(**decide_kw)
+
+    started = False
+    job_id: str | None = None
+    pick: list[dict[str, Any]] = []
+    action: WatchdogAction = "probed_no_start"
+    message = green_msg
+    prep_payload: dict[str, Any] | None = None
+
+    if dry_run:
+        action = "dry_run"
+        live_kw = dict(decide_kw)
+        live_kw["dry_run"] = False
+        would, would_reasons = decide_auto_start(**live_kw)
+        reasons = [f"dry_run probe done; would_start={would}"] + would_reasons
+        message = (
+            f"DRY-RUN {classification}: would_start={would}. {bench.message}"
+        )
+    elif should_start:
+        if classification != "GREEN":
+            action = "blocked"
+            reasons.append("refusing start — not GREEN")
+            message = f"blocked: {classification}"
+        else:
+            started, job_id, pick, start_msg = _start_one_farm_job()
+            reasons.append(start_msg)
+            if started:
+                action = "started_job"
+                state.auto_starts_today += 1
+                state.last_job_id = job_id
+                state.last_start_ts = now.isoformat()
+                phase_note = (
+                    "visuals"
+                    if any(
+                        (p or {}).get("farm_phase") == "visuals"
+                        for p in pick
+                        if isinstance(p, dict)
+                    )
+                    else "full"
+                )
+                message = (
+                    f"AUTO-START GREEN {phase_note} job={job_id} "
+                    f"(today={state.auto_starts_today}; pending was {pending_n}; "
+                    f"voice_ready was {voice_ready})"
+                )
+            else:
+                action = "probed_no_start"
+                message = f"GREEN but start skipped: {start_msg}"
+    else:
+        if classification in {"YELLOW", "RED"}:
+            action = "blocked"
+            message = (
+                f"FARM BLOCKED green-light only — {classification}. "
+                f"{bench.message}"
+            )
+        elif not pending_ok_for_start:
+            action = "probed_no_start"
+            message = (
+                f"{classification}: probe+learn ok; no production — {pending_msg}"
+            )
+        else:
+            action = "probed_no_start"
+            message = f"{classification}: not starting — {'; '.join(reasons)}"
+
+    # Phase A: bank script+TTS when GPU path did not take the slot
+    if not dry_run and not started:
+        prep_payload = _maybe_prep_voice(dry_run=False)
+        if isinstance(prep_payload, dict):
+            for item in prep_payload.get("results") or []:
+                pipe = item.get("pipeline") or {}
+                if pipe.get("spawned") and pipe.get("job_id"):
+                    if action in {"blocked", "probed_no_start"}:
+                        action = "prepped_voice"
+                        job_id = str(pipe.get("job_id"))
+                        message = (
+                            f"Phase A prep spawned job={job_id} "
+                            f"(class={classification}; GPU blocked/idle)"
+                        )
+                        reasons.append(f"prepped_voice job_id={job_id}")
+                    break
+        try:
+            from src.agents.farm import count_ready_for_stills
+
+            voice_ready = count_ready_for_stills()
+        except Exception:  # noqa: BLE001
+            pass
+
+    state.last_action = action
+    state.save(state_path)
+
+    finance_payload = _maybe_finance_recheck(dry_run=dry_run)
+    result = WatchdogTickResult(
+        at=utcnow_iso(),
+        action=action,
+        probed=True,
+        in_window=in_window,
+        classification=classification,
+        decision=decision,
+        message=message,
+        started=started,
+        dry_run=dry_run,
+        job_id=job_id,
+        pick=pick,
+        harvest=harvest_payload,
+        prep=prep_payload,
+        finance=finance_payload,
+        repair=repair_payload,
+        pending_ready=pending_n,
+        voice_ready=voice_ready,
+        learn={
+            "sample_count": (learn_payload or {}).get("sample_count"),
+            "enough_samples": (learn_payload or {}).get("enough_samples"),
+            "promotable": (learn_payload or {}).get("promotable"),
+            "chosen_scope": (learn_payload or {}).get("chosen_scope"),
+            "suggested_primary_window_utc": (learn_payload or {}).get(
+                "suggested_primary_window_utc"
+            ),
+            "suggested_backup_window_utc": (learn_payload or {}).get(
+                "suggested_backup_window_utc"
+            ),
+            "exploratory_primary_window_utc": (learn_payload or {}).get(
+                "exploratory_primary_window_utc"
+            ),
+            "windows_applied_to_schedule": (learn_payload or {}).get(
+                "windows_applied_to_schedule"
+            ),
+            "maturity_gates": (learn_payload or {}).get("maturity_gates"),
+            "error": (learn_payload or {}).get("error"),
+        }
+        if learn_payload is not None
+        else None,
+        state=asdict(state),
+        reasons=reasons,
+    )
+    _write_last(result)
+    logger.info(
+        "watchdog tick action=%s class=%s started=%s dry_run=%s "
+        "pending=%s voice_ready=%s streak=%s",
+        action,
+        classification,
+        started,
+        dry_run,
+        pending_n,
+        voice_ready,
+        state.green_streak,
+    )
+    return result
+
+
+def _maybe_repair_script_json(*, dry_run: bool = False) -> dict[str, Any] | None:
+    """Auto-retry prep/script JSONDecodeError failures (empty progress only)."""
+    if dry_run:
+        return {"skipped": True, "reason": "dry_run"}
+    try:
+        from src.agents.repair_watchdog import RepairWatchdog
+
+        actions = RepairWatchdog().scan_script_json_failures(spawn=True)
+        return {"actions": actions, "n": len(actions)}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("watchdog script_json repair failed: %s", exc)
+        return {"error": str(exc)[:300]}
+
+
+def _maybe_finance_recheck(*, dry_run: bool = False) -> dict[str, Any] | None:
+    """Daily (default) open-market price ticket refresh via FinanceAgent.
+
+    Cheap no-op when ticket is fresh. Never blocks GPU / prep / harvest.
+    """
+    try:
+        from src.agents.finance_agent import FinanceAgent
+
+        return FinanceAgent().maybe_recompute(force=False, dry_run=dry_run)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("watchdog finance price-ticket recheck failed: %s", exc)
+        return {"error": str(exc)[:300]}
+
+
+def _write_last(result: WatchdogTickResult) -> None:
+    LAST_TICK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with _LOCK:
+        LAST_TICK_PATH.write_text(
+            json.dumps(result.to_dict(), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+
+def install_crontab_hint() -> str:
+    root = str(ROOT)
+    # */10 — Rayyan CTO: production gate + harvest check every 10 minutes.
+    return (
+        f"# RunPod capacity watchdog (GREEN-only GPU; Phase A voice prep anytime; */10)\n"
+        f"# Probe + if GREEN → prefer ready_for_stills visuals else full job. "
+        f"Prep may overlap 1 GPU job (RUNPOD_PREP_WHILE_GPU; never 2 pods). "
+        f"On RED/YELLOW → script+Kokoro prep (no pod). "
+        f"Harvest refill ~15/sheet when publish on or ≥1 public-path title.\n"
+        f"# Blind sleep_factory farm stays DISARMED.\n"
+        f"*/10 * * * * cd {root} && {root}/.venv/bin/python -m src.cli.runpod_watchdog "
+        f">> {root}/output/ops/runpod_watchdog.log 2>&1\n"
+    )
+
+
+def install_crontab() -> Path:
+    """Arm watchdog cron only — does NOT re-enable blind sleep_factory farm."""
+    hint_lines = [ln for ln in install_crontab_hint().splitlines() if ln.strip()]
+    marker = "src.cli.runpod_watchdog"
+
+    import subprocess
+
+    existing = ""
+    try:
+        proc = subprocess.run(
+            ["crontab", "-l"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0:
+            existing = proc.stdout or ""
+        elif "no crontab" not in (proc.stderr or "").lower():
+            raise RuntimeError(proc.stderr or "crontab -l failed")
+    except FileNotFoundError as exc:
+        raise RuntimeError("crontab binary not available") from exc
+
+    kept = [ln for ln in existing.splitlines() if marker not in ln]
+    # Keep sleep_factory lines commented/DISARMED as-is — never uncomment them here.
+    while kept and not kept[-1].strip():
+        kept.pop()
+    new_lines = kept + ([""] if kept else []) + hint_lines + [""]
+    payload = "\n".join(new_lines)
+    proc = subprocess.run(
+        ["crontab", "-"],
+        input=payload,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr or "crontab install failed")
+    out_path = ROOT / "output" / "ops" / "crontab_runpod_watchdog.txt"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(payload, encoding="utf-8")
+    return out_path
