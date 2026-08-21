@@ -1,0 +1,41 @@
+# GPU render worker for RunPod Serverless (heavy Kokoro + CLIP + FFmpeg).
+# Build & push, then attach as the endpoint container image:
+#   docker build -f deploy/Dockerfile.render -t YOUR_REGISTRY/youtube-render:latest .
+#   docker push YOUR_REGISTRY/youtube-render:latest
+#
+# Handler is async (deploy/runpod_handler.py) — required so RunPod's event loop
+# does not hit "asyncio.run() cannot be called from a running event loop".
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NUMBA_CACHE_DIR=/tmp/numba_cache \
+    MPLCONFIGDIR=/tmp/matplotlib
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    espeak-ng \
+    libsndfile1 \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+
+# Cache ML layers separately from app source
+RUN pip install --upgrade pip \
+    && pip install "torch>=2.4.0" sentence-transformers chromadb kokoro runpod
+
+COPY src ./src
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY deploy/runpod_handler.py ./runpod_handler.py
+
+RUN pip install -e ".[ml]" \
+    && mkdir -p /tmp/numba_cache /tmp/matplotlib /tmp/work
+
+CMD ["python", "-u", "runpod_handler.py"]

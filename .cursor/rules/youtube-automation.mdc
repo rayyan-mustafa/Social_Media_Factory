@@ -1,0 +1,31 @@
+---
+globs: *.py, Dockerfile, Dockerfile.worker, docker-compose.yml, .env.example, pyproject.toml
+alwaysApply: false
+---
+# Project Overview: Automated YouTube Content Engine
+
+Production control plane for a **9-model content factory**. Canonical models: `src.domain.BUSINESS_MODELS`.
+Path helpers: `src.core.paths` — durable MinIO keys under `production/{Model}/job_{id}/`.
+**YouTube_Shorts** is direct-upload only (no production folder).
+
+**Control plane:** VPS Docker Compose — FastAPI, ARQ workers (one queue per model), PostgreSQL, Redis, MinIO.  
+**Optional:** `--profile growth` (Airtable/Apify/watchdog).  
+**Burst GPU:** RunPod when `RUNPOD_ENABLED=true`.
+
+## Core Tech Stack
+* Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, Redis/ARQ, MinIO
+* LLM: WaveSpeed / OpenRouter via `WAVESPEED_API_KEY`
+* TTS: Kokoro on `Dockerfile.worker` (`.[ml]`)
+* Media: Wikimedia + CLIP + Chroma
+* Compose: FFmpeg; Publish: YouTube refresh-token OAuth
+* Quality: ruff, mypy, pytest (CI must match)
+* Auth: optional `API_KEY` → header `X-API-Key`
+
+## Guidelines
+1. Never hardcode secrets; scrub webhooks from examples.
+2. Runtime images: `pip install -e .` (API) / `.[ml]` (worker) — never `[dev]` in runtime.
+3. Default Compose runs **all nine** model workers (`worker_youtube_shorts` + eight others).
+4. Do not reintroduce Colab/Gradio monoliths at repo root.
+5. Enforce stage transitions via `can_transition`; append `job_events`.
+6. Keep `BUSINESS_MODELS` / `FORMAT_FAMILY` / `src.core.paths` as the routing/storage source; extend adapters rather than hardcoding model lists in the pipeline.
+7. Never persist YouTube_Shorts finals to MinIO — upload to YouTube only.

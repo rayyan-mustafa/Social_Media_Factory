@@ -1,0 +1,27 @@
+{
+  "watchdog": {
+    "total_score_critical_threshold": 50,
+    "total_score_warning_threshold": 100,
+    "postgres_min_cache_hit_ratio": 90.0,
+    "redis_max_latency_seconds": 2.0
+  },
+  "pipeline": {
+    "kokoro_tts": {
+      "max_seconds_per_1000_words": 15.0,
+      "hard_limit_6k": 150.0,
+      "hard_limit_16k": 300.0
+    },
+    "ffmpeg_nvenc": {
+      "hard_limit_6k": 900.0,
+      "hard_limit_16k": 2100.0
+    }
+  },
+  "business": {
+    "topic_starvation_hours": 24,
+    "minimum_success_rate_percent": 50,
+    "max_failed_jobs_per_day": 5
+  },
+  "disk": {
+    "max_capacity_percent": 50.0
+  }
+}

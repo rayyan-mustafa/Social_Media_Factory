@@ -1,0 +1,122 @@
+# VPS production overlay — control plane on VPS, heavy video render on RunPod.
+#
+# One command on the VPS (from repo root):
+#   bash deploy/vps_up.sh
+# or:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+#
+# Prerequisites:
+#   1. .env with POSTGRES_PASSWORD, S3_SECRET_KEY, WAVESPEED_API_KEY,
+#      RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID (and API_KEY recommended)
+#   2. secrets/client_secret.json + secrets/youtube_token.json
+#   3. RunPod Serverless endpoint built from deploy/Dockerfile.render
+#      (async handler in deploy/runpod_handler.py must be deployed)
+
+x-prod-env: &prod-env
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  RUNPOD_ENABLED: "true"
+  S3_ENDPOINT_URL: http://minio:9000
+  REDIS_URL: redis://redis:6379/0
+  NUMBA_CACHE_DIR: /tmp/numba_cache
+  MPLCONFIGDIR: /tmp/matplotlib
+
+x-prod-logging: &prod-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# Lean control-plane worker (no torch/Kokoro on VPS — video render → RunPod)
+x-prod-worker: &prod-worker
+  restart: always
+  build:
+    context: .
+    dockerfile: Dockerfile
+  logging: *prod-logging
+
+services:
+  api:
+    restart: always
+    environment:
+      <<: *prod-env
+    logging: *prod-logging
+
+  # Do not expose DB/cache/object-store on the public interface
+  postgres:
+    restart: always
+    ports: !reset []
+    logging: *prod-logging
+
+  redis:
+    restart: always
+    ports: !reset []
+    logging: *prod-logging
+
+  minio:
+    restart: always
+    ports: !reset []
+    logging: *prod-logging
+
+  worker_youtube_shorts:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: YouTube_Shorts
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_podcast_audio:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Podcast_Audio
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_seo_blogs:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: SEO_Blogs
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_web_series:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Web_Series
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_radio_fm:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Radio_FM
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_ebooks_kdp:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: EBooks_KDP
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_audiobooks_acx:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Audiobooks_ACX
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_sleep_stories:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Sleep_Stories
+      CHROMA_PERSIST_DIR: /data/chroma
+
+  worker_online_courses:
+    <<: *prod-worker
+    environment:
+      <<: *prod-env
+      ARQ_QUEUE_NAME: Online_Courses_Teachable
+      CHROMA_PERSIST_DIR: /data/chroma

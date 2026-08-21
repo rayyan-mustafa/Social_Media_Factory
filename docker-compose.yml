@@ -1,0 +1,268 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Shared worker defaults (Compose extension — not a service)
+x-worker-base: &worker-base
+  logging: *default-logging
+  build:
+    context: .
+    dockerfile: Dockerfile.worker
+  command: arq src.workers.settings.WorkerSettings
+  env_file: .env
+  environment:
+    NUMBA_CACHE_DIR: /tmp/numba_cache
+    MPLCONFIGDIR: /tmp/matplotlib
+  volumes:
+    - ./secrets:/secrets:ro
+    - workdata:/data
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+  restart: unless-stopped
+
+services:
+  postgres:
+    logging: *default-logging
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-youtube}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-youtube_automation}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-youtube}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    logging: *default-logging
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    logging: *default-logging
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Set S3_SECRET_KEY in .env}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio-init:
+    logging: *default-logging
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing local/$${S3_BUCKET:-youtube-artifacts};
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Set S3_SECRET_KEY in .env}
+      S3_BUCKET: ${S3_BUCKET:-youtube-artifacts}
+
+  migrate:
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./secrets:/secrets:ro
+      - workdata:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Production workers — one ARQ queue per business model (always on)
+  worker_youtube_shorts:
+    <<: *worker-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: YouTube_Shorts
+
+  # Growth daemons (Airtable / Apify / SRE). Enable: --profile growth
+  business_manager:
+    profiles: ["growth"]
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m src.services.business_manager_daemon
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - ./config:/app/config:ro
+      - ./secrets:/secrets:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  watchdog:
+    profiles: ["growth"]
+    logging: *default-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m src.services.watchdog_daemon
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  worker_podcast_audio:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Podcast_Audio
+
+  worker_seo_blogs:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: SEO_Blogs
+
+  worker_web_series:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Web_Series
+
+  worker_radio_fm:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Radio_FM
+
+  worker_ebooks_kdp:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: EBooks_KDP
+
+  worker_audiobooks_acx:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Audiobooks_ACX
+
+  worker_sleep_stories:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Sleep_Stories
+
+  worker_online_courses:
+    <<: *worker-base
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-youtube}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-youtube_automation}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_PERSIST_DIR: /data/chroma
+      ARQ_QUEUE_NAME: Online_Courses_Teachable
+
+volumes:
+  pgdata:
+  miniodata:
+  workdata:
