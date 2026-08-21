@@ -37,6 +37,7 @@ from src.services.weird_biology_shot_plan import (  # noqa: E402
     WeirdBiologyShotPlanner,
     shots_to_specs,
 )
+from src.services.weird_biology_prop_synthesizer import PropSynthesizer  # noqa: E402
 from src.services.weird_biology_tts import synthesize_full_vo  # noqa: E402
 
 app = typer.Typer(
@@ -73,6 +74,20 @@ def _load_script_dir(script_dir: Path) -> tuple[str, str, dict]:
             except Exception:  # noqa: BLE001
                 pass
     return vo, sections, meta
+
+
+def _script_validation_ok(script_dir: Path) -> bool:
+    """Use the newest available validator result as the prop-synthesis gate."""
+    for path in (
+        script_dir / "validation_after_fix.json",
+        script_dir / "validation.json",
+    ):
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8")).get("ok") is True
+            except (OSError, json.JSONDecodeError):
+                return False
+    return False
 
 
 @app.command()
@@ -139,6 +154,20 @@ def main(
 
     vo_raw, sections_md, script_meta = _load_script_dir(script_dir)
     topic = str(script_meta.get("topic") or script_dir.name)
+
+    # Expand the persistent prop library from this validated script before planning.
+    if _script_validation_ok(script_dir):
+        console.print("  props: scanning validated script and expanding library...")
+        synthesized_props = PropSynthesizer().auto_expand_props_for_script(
+            sections_md or vo_raw,
+            topic=topic,
+        )
+        if synthesized_props:
+            console.print(f"  props: ready ({', '.join(synthesized_props)})")
+        else:
+            console.print("  props: existing library covers this script")
+    else:
+        console.print("  props: skipped (script validation is missing or not OK)")
 
     # 1) Full VO
     full_vo = audio_dir / "full_vo.wav"

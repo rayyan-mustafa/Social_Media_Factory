@@ -26,10 +26,11 @@ sys.path.insert(0, str(_ROOT))
 
 OPENROUTER = (os.getenv("OPENROUTER_API_KEY") or "").strip()
 ANTHROPIC  = (os.getenv("ANTHROPIC_API_KEY")  or "").strip()
-OR_MODEL   = (os.getenv("DEMO_CHAT_MODEL") or "google/gemini-2.5-flash").strip()
+OR_MODEL   = (os.getenv("DEMO_CHAT_MODEL") or "openrouter/free").strip()
 
 
 def _forward_openrouter(payload: dict) -> dict:
+    model_name = (payload.get("model") or OR_MODEL).strip() or "openrouter/free"
     messages = []
     system = payload.get("system") or ""
     if system:
@@ -37,9 +38,10 @@ def _forward_openrouter(payload: dict) -> dict:
     for m in payload.get("messages") or []:
         messages.append({"role": m.get("role"), "content": m.get("content")})
     body = {
-        "model": OR_MODEL,
+        "model": model_name,
         "max_tokens": int(payload.get("max_tokens") or 300),
         "messages": messages,
+        "reasoning": {"enabled": True},
     }
     req = url_request.Request(
         "https://openrouter.ai/api/v1/chat/completions",

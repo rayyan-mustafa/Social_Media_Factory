@@ -1,0 +1,11 @@
+{
+  "test_circle": {
+    "category": "biology",
+    "created_at": "2026-08-19T12:26:02.678306+00:00",
+    "description": "test circle",
+    "python_code": "bx, by = W * 0.7, H * 0.28\nparts.append(f'<circle cx=\"{bx:.1f}\" cy=\"{by:.1f}\" r=\"20\" fill=\"{fill}\" stroke=\"{stick}\" stroke-width=\"4\"/>')",
+    "tags": [
+      "test"
+    ]
+  }
+}

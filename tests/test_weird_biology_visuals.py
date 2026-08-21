@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PIL import Image
 
+import src.services.weird_biology_prop_registry as prop_registry
 from src.services.weird_biology_scenes import (
     build_visual_timeline,
     ensure_core_data_xray_slot,
@@ -95,6 +96,62 @@ class TestStyleConfig(unittest.TestCase):
 
     def test_font_exists(self):
         self.assertTrue(kinetic_font_path().exists())
+
+
+class TestDynamicPropRegistry(unittest.TestCase):
+    def setUp(self):
+        self._old_file = prop_registry.CUSTOM_PROPS_FILE
+        self._old_cache = prop_registry._CUSTOM_PROPS_CACHE
+        self._temp_dir = tempfile.TemporaryDirectory()
+        prop_registry.CUSTOM_PROPS_FILE = (
+            Path(self._temp_dir.name) / "custom_props.json"
+        )
+        prop_registry._CUSTOM_PROPS_CACHE = None
+
+    def tearDown(self):
+        prop_registry.CUSTOM_PROPS_FILE = self._old_file
+        prop_registry._CUSTOM_PROPS_CACHE = self._old_cache
+        self._temp_dir.cleanup()
+
+    def test_register_search_and_render_custom_prop(self):
+        code = (
+            "bx, by = W * 0.75, H * 0.25\n"
+            "parts.append(f'<circle cx=\"{bx:.1f}\" cy=\"{by:.1f}\" r=\"24\" "
+            "fill=\"{fill}\" stroke=\"{stick}\" stroke-width=\"4\"/>')"
+        )
+        self.assertTrue(
+            prop_registry.register_custom_prop(
+                "cell_nucleus", "A simple cell nucleus", code, tags=["cell", "nucleus"]
+            )
+        )
+        self.assertTrue(prop_registry.has_prop("cell_nucleus"))
+        self.assertEqual(prop_registry.search_props(["nucleus"])[0][0], "cell_nucleus")
+        parts = prop_registry.render_custom_prop(
+            "cell_nucleus", palette_rgb(), 1280, 720, __import__("random").Random(42)
+        )
+        self.assertTrue(any("<circle" in part for part in parts))
+
+    def test_rejects_unsafe_generated_code(self):
+        self.assertFalse(
+            prop_registry.register_custom_prop(
+                "unsafe_prop", "must be rejected", "import os\nos.system('echo bad')"
+            )
+        )
+        self.assertFalse(prop_registry.has_prop("unsafe_prop"))
+
+    def test_planner_prop_list_stays_bounded(self):
+        prop_registry._CUSTOM_PROPS_CACHE = {
+            f"organ_{index}": {
+                "description": f"organ {index}",
+                "tags": ["organ"],
+                "python_code": "parts.append('<circle cx=\"10\" cy=\"10\" r=\"2\"/>')",
+            }
+            for index in range(500)
+        }
+        props = prop_registry.get_planner_props("human organ", max_custom=12)
+        self.assertLessEqual(
+            len(props), len(prop_registry.BUILTIN_PROPS) + 12
+        )
 
 
 class TestStickmanRender(unittest.TestCase):

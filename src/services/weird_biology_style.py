@@ -11,7 +11,7 @@ from src.services.settings import ROOT
 
 CONFIG_PATH = ROOT / "config" / "weird_biology_visual.json"
 
-# Defaults (overridden by JSON)
+# ── Legacy defaults (kept for backward compat) ─────────────────────────────
 BG_TEAL = "#3E6B6B"
 BG_SLATE = "#4A5F6A"
 CORAL = "#E8724C"
@@ -19,33 +19,139 @@ HEAD_FILL = "#FFFFFF"
 STICK_STROKE = "#111111"
 PLANNER_MODEL = "google/gemini-2.5-flash-lite"
 
-# Reference crib-scene warm palette (sampled from Rayyan upload)
+# ── Style names ─────────────────────────────────────────────────────────────
+STYLE_DEFAULT           = "default"
+STYLE_REFERENCE_VIBRANT = "reference_vibrant"  # nursery/crib warm cream
+STYLE_WARM_CREAM        = "warm_cream"          # competitor default: cream bg
+STYLE_WARM_TAN_SOFA     = "warm_tan_sofa"       # mosquito sofa scene
+STYLE_OUTDOOR_SPLIT     = "outdoor_split"       # white sky + flat green grass
+STYLE_BLUE_BENCH        = "blue_bench"          # comparison bench scene
+STYLES = (
+    STYLE_DEFAULT,
+    STYLE_REFERENCE_VIBRANT,
+    STYLE_WARM_CREAM,
+    STYLE_WARM_TAN_SOFA,
+    STYLE_OUTDOOR_SPLIT,
+    STYLE_BLUE_BENCH,
+)
+
+# ── Palettes — colour-sampled from the 4 reference images ───────────────────
+
+# Image 1 — warm parchment (history / indoor biology)
+PALETTE_WARM_CREAM: dict[str, str] = {
+    "bg_teal":            "#EDE8C8",
+    "bg_slate":           "#C8B890",
+    "floor_line":         "#2A2218",
+    "stick_stroke":       "#111111",
+    "head_fill":          "#FFFFFF",
+    "eye_white":          "#FFFFFF",
+    "eye_pupil":          "#111111",
+    "coral_accent":       "#E8724C",
+    "xray_fill":          "#E8D4B0",
+    "xray_internal":      "#E8724C",
+    "prop_fill":          "#EDE8C8",
+    "prop_stroke":        "#111111",
+    "floor_band":         "#B8A870",
+    "wall_base_shade":    "#E0D8B0",
+    "wall_corner_shadow": "#D8D0A8",
+}
+
+# Image 2 — warm tan + teal sofa (mosquito / indoor room scenes)
+PALETTE_WARM_TAN_SOFA: dict[str, str] = {
+    "bg_teal":            "#C8B09A",
+    "bg_slate":           "#A89078",
+    "floor_line":         "#2A2010",
+    "stick_stroke":       "#111111",
+    "head_fill":          "#FFFFFF",
+    "eye_white":          "#FFFFFF",
+    "eye_pupil":          "#111111",
+    "coral_accent":       "#E8724C",
+    "xray_fill":          "#D4B898",
+    "xray_internal":      "#E8724C",
+    "prop_fill":          "#5A9A8A",
+    "prop_stroke":        "#111111",
+    "sofa_fill":          "#5A9A8A",
+    "sofa_side":          "#4A8070",
+    "sofa_back":          "#3A7060",
+    "floor_band":         "#907060",
+    "wall_base_shade":    "#B8A090",
+    "wall_corner_shadow": "#A89080",
+}
+
+# Image 3 — outdoor split: white sky / flat green ground (nature / animal)
+PALETTE_OUTDOOR_SPLIT: dict[str, str] = {
+    "bg_teal":            "#F0F0F0",
+    "bg_slate":           "#4E9A40",
+    "floor_line":         "#2A5018",
+    "stick_stroke":       "#111111",
+    "head_fill":          "#FFFFFF",
+    "eye_white":          "#FFFFFF",
+    "eye_pupil":          "#111111",
+    "coral_accent":       "#E8724C",
+    "xray_fill":          "#C8E8C0",
+    "xray_internal":      "#E8724C",
+    "prop_fill":          "#F0F0F0",
+    "prop_stroke":        "#111111",
+    "grass_green":        "#4E9A40",
+    "sky_white":          "#F0F0F0",
+    "floor_band":         "#3A7830",
+    "wall_base_shade":    "#E8E8E8",
+    "wall_corner_shadow": "#D8D8D8",
+}
+
+# Image 4 — rich blue bench (comparison / Limburger / equals-sign scenes)
+PALETTE_BLUE_BENCH: dict[str, str] = {
+    "bg_teal":            "#8AAFCF",
+    "bg_slate":           "#5A82A8",
+    "floor_line":         "#1A2A3A",
+    "stick_stroke":       "#111111",
+    "head_fill":          "#FFFFFF",
+    "eye_white":          "#FFFFFF",
+    "eye_pupil":          "#111111",
+    "coral_accent":       "#E84848",
+    "xray_fill":          "#90B8D8",
+    "xray_internal":      "#E84848",
+    "prop_fill":          "#4A72A8",
+    "prop_stroke":        "#111111",
+    "bench_fill":         "#4A72A8",
+    "bench_side":         "#3A5A90",
+    "bench_leg":          "#2A4878",
+    "floor_band":         "#4A6A90",
+    "wall_base_shade":    "#7A9DC0",
+    "wall_corner_shadow": "#6A8DB0",
+}
+
+# Original vibrant nursery (crib-door scene)
 PALETTE_VIBRANT_DEFAULT: dict[str, str] = {
-    "bg_teal": "#F2DAAE",
-    "bg_slate": "#C8B08A",
-    "floor_line": "#2A2218",
-    "stick_stroke": STICK_STROKE,
-    "head_fill": HEAD_FILL,
-    "eye_white": "#FFFFFF",
-    "eye_pupil": "#111111",
-    "coral_accent": "#D0942C",
-    "xray_fill": "#E8D4B0",
-    "xray_internal": "#D0942C",
-    "prop_fill": "#F2DAAE",
-    "prop_stroke": "#111111",
-    "crib_fill": "#989898",
-    "crib_side": "#6A6A6A",
-    "crib_post": "#5A5A5A",
-    "door_fill": "#F2DAAE",
-    "door_panel": "#E8D09A",
-    "floor_band": "#B09870",
-    "wall_base_shade": "#E8D09A",
+    "bg_teal":            "#F2DAAE",
+    "bg_slate":           "#C8B08A",
+    "floor_line":         "#2A2218",
+    "stick_stroke":       STICK_STROKE,
+    "head_fill":          HEAD_FILL,
+    "eye_white":          "#FFFFFF",
+    "eye_pupil":          "#111111",
+    "coral_accent":       "#D0942C",
+    "xray_fill":          "#E8D4B0",
+    "xray_internal":      "#D0942C",
+    "prop_fill":          "#F2DAAE",
+    "prop_stroke":        "#111111",
+    "crib_fill":          "#989898",
+    "crib_side":          "#6A6A6A",
+    "crib_post":          "#5A5A5A",
+    "door_fill":          "#F2DAAE",
+    "door_panel":         "#E8D09A",
+    "floor_band":         "#B09870",
+    "wall_base_shade":    "#E8D09A",
     "wall_corner_shadow": "#E0C898",
 }
 
-STYLE_DEFAULT = "default"
-STYLE_REFERENCE_VIBRANT = "reference_vibrant"
-STYLES = (STYLE_DEFAULT, STYLE_REFERENCE_VIBRANT)
+# ── bg_mode: rendering layout ───────────────────────────────────────────────
+BG_MODES = (
+    "default",        # standard wall + floor band
+    "outdoor_split",  # white sky top + flat green bottom
+    "sofa",           # draw teal sofa in scene
+    "bench",          # draw blue bench (comparison scenes)
+)
 
 
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:
@@ -63,26 +169,33 @@ def load_visual_config() -> dict[str, Any]:
             "height": 720,
             "fps": 12,
             "palette": {
-                "bg_teal": BG_TEAL,
-                "bg_slate": BG_SLATE,
-                "floor_line": "#2A3F45",
-                "stick_stroke": STICK_STROKE,
-                "head_fill": HEAD_FILL,
-                "eye_white": "#FFFFFF",
-                "eye_pupil": "#111111",
-                "coral_accent": CORAL,
-                "xray_fill": "#9BB8B8",
-                "xray_internal": CORAL,
-                "prop_fill": "#5A7A7A",
-                "prop_stroke": "#1A2A2E",
+                "bg_teal":            "#EDE8C8",   # ← WARM CREAM now default
+                "bg_slate":           "#C8B890",
+                "floor_line":         "#2A2218",
+                "stick_stroke":       STICK_STROKE,
+                "head_fill":          HEAD_FILL,
+                "eye_white":          "#FFFFFF",
+                "eye_pupil":          "#111111",
+                "coral_accent":       CORAL,
+                "xray_fill":          "#E8D4B0",
+                "xray_internal":      CORAL,
+                "prop_fill":          "#EDE8C8",
+                "prop_stroke":        "#111111",
+                "floor_band":         "#B8A870",
+                "wall_base_shade":    "#E0D8B0",
+                "wall_corner_shadow": "#D8D0A8",
             },
-            "palette_vibrant": dict(PALETTE_VIBRANT_DEFAULT),
+            "palette_vibrant":    dict(PALETTE_VIBRANT_DEFAULT),
+            "palette_warm_cream": dict(PALETTE_WARM_CREAM),
+            "palette_warm_tan":   dict(PALETTE_WARM_TAN_SOFA),
+            "palette_outdoor":    dict(PALETTE_OUTDOOR_SPLIT),
+            "palette_blue_bench": dict(PALETTE_BLUE_BENCH),
             "scene_styles": {
                 "crib_door_scene": STYLE_REFERENCE_VIBRANT,
-                "default": STYLE_DEFAULT,
+                "default":         STYLE_WARM_CREAM,
             },
             "fonts": {
-                "kinetic": str(ROOT / "assets/fonts/ArchivoBlack-Regular.ttf"),
+                "kinetic":  str(ROOT / "assets/fonts/ArchivoBlack-Regular.ttf"),
                 "fallback": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             },
             "timing": {
@@ -90,9 +203,9 @@ def load_visual_config() -> dict[str, Any]:
                 "target_beat_s_max": 4.0,
                 "voice_wpm": 150.0,
             },
-            "planner_model": PLANNER_MODEL,
-            "tts_mode": "whole_vo",
-            "visual_backend": "svg_stickman_rig",
+            "planner_model":    PLANNER_MODEL,
+            "tts_mode":         "whole_vo",
+            "visual_backend":   "svg_stickman_rig",
             "stickman_quality": "v5",
         }
     data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -107,7 +220,7 @@ def render_scale() -> float:
 
 
 def resolve_style(style: str | None = None, *, layout: str | None = None) -> str:
-    """Resolve visual style: explicit style wins, else scene_styles[layout], else default."""
+    """Resolve visual style — warm_cream is now the default (not cold teal)."""
     s = (style or "").strip().lower()
     if s in STYLES:
         return s
@@ -119,7 +232,7 @@ def resolve_style(style: str | None = None, *, layout: str | None = None) -> str
         return mapped
     if layout_key == "crib_door_scene":
         return STYLE_REFERENCE_VIBRANT
-    return STYLE_DEFAULT
+    return STYLE_WARM_CREAM   # warm cream default (not cold teal)
 
 
 def palette_rgb(
@@ -127,18 +240,31 @@ def palette_rgb(
     *,
     layout: str | None = None,
 ) -> dict[str, tuple[int, int, int]]:
-    """Return palette RGB map. Teal brand default, or warm reference_vibrant."""
+    """Return palette RGB map for any named style."""
     cfg = load_visual_config()
     resolved = resolve_style(style, layout=layout)
-    if resolved == STYLE_REFERENCE_VIBRANT:
-        pal = cfg.get("palette_vibrant") or PALETTE_VIBRANT_DEFAULT
-    else:
-        pal = cfg.get("palette") or {}
-    out = {k: _hex_to_rgb(str(v)) for k, v in pal.items()}
-    # Ensure keys used by renderer always exist (merge vibrant extras onto default if sparse)
-    if resolved == STYLE_REFERENCE_VIBRANT:
-        for k, v in PALETTE_VIBRANT_DEFAULT.items():
+
+    _MAP = {
+        STYLE_REFERENCE_VIBRANT: ("palette_vibrant",    PALETTE_VIBRANT_DEFAULT),
+        STYLE_WARM_CREAM:        ("palette_warm_cream",  PALETTE_WARM_CREAM),
+        STYLE_WARM_TAN_SOFA:     ("palette_warm_tan",   PALETTE_WARM_TAN_SOFA),
+        STYLE_OUTDOOR_SPLIT:     ("palette_outdoor",    PALETTE_OUTDOOR_SPLIT),
+        STYLE_BLUE_BENCH:        ("palette_blue_bench", PALETTE_BLUE_BENCH),
+    }
+
+    if resolved in _MAP:
+        cfg_key, fallback = _MAP[resolved]
+        raw = cfg.get(cfg_key) or fallback
+        out = {k: _hex_to_rgb(str(v)) for k, v in raw.items()}
+        for k, v in fallback.items():
             out.setdefault(k, _hex_to_rgb(v))
+    else:
+        raw = cfg.get("palette") or {}
+        out = {k: _hex_to_rgb(str(v)) for k, v in raw.items()}
+
+    # Guarantee keys referenced in renderer exist
+    for k, v in PALETTE_WARM_CREAM.items():
+        out.setdefault(k, _hex_to_rgb(v))
     return out
 
 

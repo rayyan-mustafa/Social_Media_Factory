@@ -21,9 +21,10 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from src.services.weird_biology_assets import ASSETS_ROOT, bootstrap_assets
+from src.services.weird_biology_scene_graph import SceneSpec
 from src.services.weird_biology_stickman import CharacterSpec, ShotSpec
 from src.services.weird_biology_style import load_visual_config
 
@@ -199,6 +200,145 @@ def _rig_default_single(shot: ShotSpec, *, w: int, h: int) -> RigSpec:
         ]
     )
     return RigSpec(layout="default", layers=layers, width=w, height=h)
+
+
+def _scene_background_asset_name(background_asset: str | None) -> str:
+    if not background_asset:
+        return "backgrounds/nursery_room.png"
+    candidate = str(background_asset).strip()
+    if candidate.endswith(".png"):
+        return candidate
+    if candidate.startswith(("backgrounds/", "props/", "parts/", "characters/")):
+        return candidate + ".png"
+    if candidate in {"nursery_room", "nursery"}:
+        return "backgrounds/nursery_room.png"
+    return f"backgrounds/{candidate}.png"
+
+
+def _scene_character_asset_layers(character) -> list[tuple[str, int, int, float, int, float]]:
+    role = str(character.role or "adult").lower()
+    pose = str(character.pose or "stand").lower()
+    if role.startswith("baby"):
+        torso = "characters/baby_torso_seated.png"
+        head = "parts/baby_head_surprise.png"
+    else:
+        torso = "characters/adult_torso_walk.png"
+        head = "parts/adult_head_smile.png"
+
+    scale = max(0.2, float(getattr(character, "scale", 1.0)))
+    x = int(character.x * 1280)
+    y = int(character.y * 720)
+    torso_w, torso_h = Image.open(ASSETS_DIR / torso).size
+    head_w, head_h = Image.open(ASSETS_DIR / head).size
+    torso_scale = 0.85 * scale
+    head_scale = 0.9 * scale
+    layers: list[tuple[str, int, int, float, int, float]] = [
+        (torso, x - int(torso_w * torso_scale / 2), y - int(torso_h * torso_scale / 2), 0.0, int(character.z), torso_scale),
+        (head, x - int(head_w * head_scale / 2), y - int(head_h * head_scale) - 8, 0.0, int(character.z) + 1, head_scale),
+    ]
+    if pose in {"standing", "walk", "walking", "stand"}:
+        return layers
+    if role.startswith("baby"):
+        return [
+            (torso, x - int(torso_w * torso_scale / 2), y - int(torso_h * torso_scale / 2), 0.0, int(character.z), torso_scale),
+            (head, x - int(head_w * head_scale / 2), y - int(head_h * head_scale) - 8, 0.0, int(character.z) + 1, head_scale),
+        ]
+    return layers
+
+
+def _to_scene_layers(scene: SceneSpec) -> list[LayerSpec]:
+    layers: list[LayerSpec] = []
+    for item in scene.layers():
+        if hasattr(item, "asset"):
+            asset_name = str(item.asset)
+            if asset_name.endswith(".png"):
+                rel = asset_name
+            elif asset_name.startswith(("backgrounds/", "props/", "parts/", "characters/")):
+                rel = f"{asset_name}.png"
+            elif asset_name in {"door", "crib"}:
+                rel = f"props/{asset_name}_frame.png" if asset_name == "door" else "props/crib_back.png"
+            else:
+                rel = f"props/{asset_name}.png"
+            if not (ASSETS_DIR / rel).exists():
+                continue
+            scale = max(0.2, float(getattr(item, "scale", 1.0)))
+            base = Image.open(ASSETS_DIR / rel).convert("RGBA")
+            w, h = base.size
+            scaled = (max(1, int(w * scale)), max(1, int(h * scale)))
+            x = int(item.x * scene.width) - scaled[0] // 2
+            y = int(item.y * scene.height) - scaled[1] // 2
+            layers.append(
+                LayerSpec(
+                    rel,
+                    x,
+                    y,
+                    rotation=float(getattr(item, "rotation", 0.0)),
+                    z=int(getattr(item, "z", 0)),
+                )
+            )
+            if scale != 1.0:
+                # Keep the object at a safer screen scale by resizing the asset itself before paste.
+                pass
+        else:
+            for rel, px, py, rotation, z, scale in _scene_character_asset_layers(item):
+                if not (ASSETS_DIR / rel).exists():
+                    continue
+                layers.append(LayerSpec(rel, px, py, rotation=rotation, z=z))
+    return sorted(layers, key=lambda layer: layer.z)
+
+
+def _apply_warm_nursery_glow(canvas: Image.Image, scene: SceneSpec) -> None:
+    glow = Image.new("RGBA", (scene.width, scene.height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(glow)
+    draw.ellipse(
+        (int(scene.width * 0.06), int(scene.height * 0.10), int(scene.width * 0.82), int(scene.height * 0.78)),
+        fill=(245, 210, 150, 70),
+    )
+    draw.rectangle(
+        (int(scene.width * 0.68), 0, scene.width, scene.height),
+        fill=(240, 208, 162, 24),
+    )
+    canvas.alpha_composite(glow)
+
+
+def render_scene(scene: SceneSpec) -> Image.Image:
+    """Render a validated scene graph onto the default Pillow canvas."""
+    scene.validate()
+    canvas = Image.new("RGBA", (scene.width, scene.height), (0, 0, 0, 255))
+    bg_rel = _scene_background_asset_name(scene.background.asset)
+    bg = load_asset(bg_rel)
+    if bg.size != (scene.width, scene.height):
+        bg = bg.resize((scene.width, scene.height), Image.Resampling.LANCZOS)
+    paste_layer(canvas, bg, (0, 0))
+    _apply_warm_nursery_glow(canvas, scene)
+
+    for layer in _to_scene_layers(scene):
+        part = load_asset(layer.asset)
+        # Scale asset layers to their intended screen size so props and characters read as solid forms.
+        if layer.asset.startswith("props/") or layer.asset.startswith("characters/") or layer.asset.startswith("parts/"):
+            target_scale = 1.0
+            if layer.asset.startswith("props/door"):
+                target_scale = 0.72
+            elif layer.asset.startswith("props/crib"):
+                target_scale = 0.68
+            elif layer.asset.startswith("characters/baby"):
+                target_scale = 1.55
+            elif layer.asset.startswith("parts/baby"):
+                target_scale = 1.2
+            if target_scale != 1.0:
+                new_size = (max(1, int(part.width * target_scale)), max(1, int(part.height * target_scale)))
+                part = part.resize(new_size, Image.Resampling.LANCZOS)
+        part = _rotate_layer(part, layer.rotation)
+        paste_layer(canvas, part, (layer.x, layer.y))
+
+    return canvas.convert("RGB")
+
+
+def render_scene_file(scene: SceneSpec, out_path: Path) -> Path:
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    render_scene(scene).save(out_path)
+    return out_path
 
 
 def render_composited_still(shot: ShotSpec) -> Image.Image:

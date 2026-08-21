@@ -16,6 +16,6 @@
   "env": {
     "ANTHROPIC_API_KEY": "@anthropic_api_key",
     "OPENROUTER_API_KEY": "@openrouter_api_key",
-    "DEMO_CHAT_MODEL": "google/gemini-2.5-flash"
+    "DEMO_CHAT_MODEL": "openrouter/free"
   }
 }

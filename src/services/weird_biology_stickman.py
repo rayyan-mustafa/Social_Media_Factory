@@ -16,9 +16,19 @@ from typing import Any
 import cairosvg
 from PIL import Image, ImageDraw, ImageFont
 
+from src.services.weird_biology_prop_registry import (
+    DynamicPropsTuple,
+    get_all_props,
+    render_custom_prop,
+)
 from src.services.weird_biology_style import (
+    BG_MODES,
+    STYLE_BLUE_BENCH,
     STYLE_DEFAULT,
+    STYLE_OUTDOOR_SPLIT,
     STYLE_REFERENCE_VIBRANT,
+    STYLE_WARM_CREAM,
+    STYLE_WARM_TAN_SOFA,
     STYLES,
     kinetic_font_path,
     load_visual_config,
@@ -43,17 +53,8 @@ POSES = (
 # Poses that get speed/motion lines near legs/feet
 _WALK_POSES = frozenset({"enter_door", "walk"})
 
-PROPS = (
-    "none",
-    "door",
-    "crib",
-    "arrow",
-    "thermometer",
-    "brain_icon",
-    "floor_only",
-    "bubble",
-    "room_corner",
-)
+# Dynamic scalable props wrapper (supports infinite custom synthesized props)
+PROPS = DynamicPropsTuple()
 
 ROLES = ("adult", "baby")
 
@@ -147,6 +148,8 @@ class ShotSpec:
     bubble_anchor: str = "baby"  # which cast role the bubble points at
     # Empty → resolve via scene_styles (crib_door_scene → reference_vibrant)
     style: str = ""
+    # Background rendering mode: default|outdoor_split|sofa|bench
+    bg_mode: str = "default"
 
     @classmethod
     def from_dict(cls, d: dict[str, Any], *, seed: int = 0) -> ShotSpec:
@@ -181,6 +184,9 @@ class ShotSpec:
         if bubble_bars > 5:
             bubble_bars = 5
 
+        bg_mode_raw = str(d.get("bg_mode") or "default").strip().lower()
+        bg_mode = bg_mode_raw if bg_mode_raw in BG_MODES else "default"
+
         return cls(
             pose=str(d.get("pose") or "stand").strip().lower(),
             emotion=str(d.get("emotion") or "neutral").strip().lower(),
@@ -198,6 +204,7 @@ class ShotSpec:
             layout=layout,
             bubble_anchor=str(d.get("bubble_anchor") or "baby").strip().lower(),
             style=style,
+            bg_mode=bg_mode,
         )
 
     def resolved_style(self) -> str:
@@ -806,6 +813,267 @@ def _props_svg(
                 f'fill="{fill}" stroke="{stroke}" stroke-width="4"/>'
             )
 
+        # ── New competitor-style props ────────────────────────────────────────────────
+
+        elif p == "sun_ray":
+            # Bright circle + 8 irregular radiating spikes (top-right corner)
+            sx, sy = W * 0.80, H * 0.16
+            sr = 48.0
+            # Sun body
+            sun_path = _imperfect_circle_path(sx, sy, sr, rng, n=42, amp=1.6)
+            # yellow fill: use coral_accent lightened or a fixed warm yellow
+            sun_yellow = "#F5C842"
+            parts.append(
+                f'<path d="{sun_path}" fill="{sun_yellow}" '
+                f'stroke="{stick}" stroke-width="5.5" stroke-linejoin="round"/>'
+            )
+            # Radial spikes: 8 rays at irregular lengths, jittered
+            n_rays = 8
+            for i in range(n_rays):
+                ang = (2 * math.pi * i / n_rays) + rng.uniform(-0.08, 0.08)
+                r_inner = sr + 10 + rng.uniform(-3, 3)
+                r_outer = sr + 38 + rng.uniform(-8, 8)
+                x0r = sx + r_inner * math.cos(ang)
+                y0r = sy + r_inner * math.sin(ang)
+                x1r = sx + r_outer * math.cos(ang)
+                y1r = sy + r_outer * math.sin(ang)
+                # Spike width tapers: draw as thin triangle
+                perp_ang = ang + math.pi / 2
+                hw = 6.0 + rng.uniform(-1, 1)  # half-width at base
+                bx0 = x0r + hw * math.cos(perp_ang)
+                by0 = y0r + hw * math.sin(perp_ang)
+                bx1 = x0r - hw * math.cos(perp_ang)
+                by1 = y0r - hw * math.sin(perp_ang)
+                spike_d = (
+                    f"M {bx0:.1f} {by0:.1f} "
+                    f"L {x1r:.1f} {y1r:.1f} "
+                    f"L {bx1:.1f} {by1:.1f} Z"
+                )
+                parts.append(
+                    f'<path d="{spike_d}" fill="{sun_yellow}" '
+                    f'stroke="{stick}" stroke-width="4.0" stroke-linejoin="round"/>'
+                )
+
+        elif p == "rain_drops":
+            # 6 hand-drawn teardrop shapes falling at slight angles (top-right area)
+            drop_positions = [
+                (W * 0.70, H * 0.14),
+                (W * 0.76, H * 0.10),
+                (W * 0.82, H * 0.16),
+                (W * 0.88, H * 0.12),
+                (W * 0.73, H * 0.22),
+                (W * 0.85, H * 0.24),
+            ]
+            drop_color = "#6AADE0"  # light blue matching reference sky scenes
+            for dx_, dy_ in drop_positions:
+                dx_ += rng.uniform(-4, 4)
+                dy_ += rng.uniform(-4, 4)
+                dw, dh = 10.0, 20.0
+                # Teardrop: circle top + pointed bottom
+                drop_d = (
+                    f"M {dx_:.1f} {dy_:.1f} "
+                    f"C {dx_ + dw:.1f} {dy_:.1f} "
+                    f"{dx_ + dw:.1f} {dy_ + dh * 0.6:.1f} "
+                    f"{dx_:.1f} {dy_ + dh:.1f} "
+                    f"C {dx_ - dw:.1f} {dy_ + dh * 0.6:.1f} "
+                    f"{dx_ - dw:.1f} {dy_:.1f} "
+                    f"{dx_:.1f} {dy_:.1f} Z"
+                )
+                parts.append(
+                    f'<path d="{drop_d}" fill="{drop_color}" '
+                    f'stroke="{stick}" stroke-width="3.5" stroke-linejoin="round"/>'
+                )
+
+        elif p == "smell_cloud":
+            # Loose squiggly spiral scent cloud (right side, mid-height)
+            # Matches reference image 4 exactly: twin yellow squiggle clouds
+            cloud_yellow = "#E8D94A"
+            # Draw TWO clouds side by side (character smell = subject smell)
+            for cloud_i, (cx_, cy_) in enumerate([
+                (W * 0.56, H * 0.28),
+                (W * 0.72, H * 0.28),
+            ]):
+                # Draw 3 wavy ascending loops to form the cloud column
+                prev_x, prev_y = cx_, cy_ + 80
+                squiggle_parts = [f"M {prev_x:.1f} {prev_y:.1f}"]
+                loop_heights = [60, 50, 40]
+                for li, lh in enumerate(loop_heights):
+                    amp_x = 28 + rng.uniform(-4, 4)
+                    mid_y = prev_y - lh * 0.5 + rng.uniform(-3, 3)
+                    end_y = prev_y - lh
+                    # Alternating left/right loops
+                    side = 1 if li % 2 == 0 else -1
+                    squiggle_parts.append(
+                        f"C {prev_x + side*amp_x:.1f} {mid_y:.1f} "
+                        f"{prev_x - side*amp_x*0.6:.1f} {mid_y:.1f} "
+                        f"{prev_x:.1f} {end_y:.1f}"
+                    )
+                    prev_y = end_y
+                parts.append(
+                    f'<path d="{" ".join(squiggle_parts)}" fill="none" '
+                    f'stroke="{cloud_yellow}" stroke-width="7.0" '
+                    f'stroke-linecap="round" stroke-linejoin="round"/>'
+                )
+            # Equals sign between them (reuse equals_sign logic inline)
+            eq_cx = W * 0.64
+            eq_cy = H * 0.38
+            eq_w, eq_gap = 36.0, 14.0
+            for bar_dy in (-eq_gap / 2, eq_gap / 2):
+                bar_y = eq_cy + bar_dy
+                bar_path = _jittered_poly_path(
+                    [(eq_cx - eq_w, bar_y), (eq_cx + eq_w, bar_y)],
+                    rng, amp=1.0, mid_amp=1.5,
+                )
+                parts.append(
+                    f'<path d="{bar_path}" fill="none" stroke="{stick}" '
+                    f'stroke-width="7.0" stroke-linecap="round"/>'
+                )
+
+        elif p == "equals_sign":
+            # Bold hand-drawn = sign, centered right of character
+            eq_cx = W * 0.68
+            eq_cy = H * 0.42
+            eq_w, eq_gap = 44.0, 18.0
+            for bar_dy in (-eq_gap / 2, eq_gap / 2):
+                bar_y = eq_cy + bar_dy
+                bar_path = _jittered_poly_path(
+                    [(eq_cx - eq_w, bar_y), (eq_cx + eq_w, bar_y)],
+                    rng, amp=1.2, mid_amp=2.0,
+                )
+                parts.append(
+                    f'<path d="{bar_path}" fill="none" stroke="{stick}" '
+                    f'stroke-width="8.5" stroke-linecap="round"/>'
+                )
+
+        elif p == "cheese_wedge":
+            # Triangular cheese wedge (right side), yellow body + darker rind band
+            # Matches reference image 4: pale yellow wedge on a plate
+            cw_cx, cw_cy = W * 0.80, H * 0.52
+            cw_w, cw_h = 130.0, 90.0
+            cheese_yellow = "#E8DC7A"
+            rind_brown = "#B8943A"
+            # Wedge body (triangle)
+            wedge_d = (
+                f"M {cw_cx - cw_w*0.5:.1f} {cw_cy + cw_h*0.5:.1f} "
+                f"L {cw_cx + cw_w*0.5:.1f} {cw_cy + cw_h*0.5:.1f} "
+                f"L {cw_cx:.1f} {cw_cy - cw_h*0.5:.1f} Z"
+            )
+            parts.append(
+                f'<path d="{wedge_d}" fill="{cheese_yellow}" '
+                f'stroke="{stick}" stroke-width="5.5" stroke-linejoin="round"/>'
+            )
+            # Rind band along the bottom edge
+            rind_h = 18.0
+            rind_d = (
+                f"M {cw_cx - cw_w*0.5:.1f} {cw_cy + cw_h*0.5:.1f} "
+                f"L {cw_cx + cw_w*0.5:.1f} {cw_cy + cw_h*0.5:.1f} "
+                f"L {cw_cx + cw_w*0.5:.1f} {cw_cy + cw_h*0.5 - rind_h:.1f} "
+                f"L {cw_cx - cw_w*0.5:.1f} {cw_cy + cw_h*0.5 - rind_h:.1f} Z"
+            )
+            parts.append(
+                f'<path d="{rind_d}" fill="{rind_brown}" '
+                f'stroke="{stick}" stroke-width="3.5" stroke-linejoin="round"/>'
+            )
+            # Plate: flat oval under the wedge
+            plate_y = cw_cy + cw_h * 0.5 + 12
+            parts.append(
+                f'<ellipse cx="{cw_cx:.1f}" cy="{plate_y:.1f}" rx="{cw_w*0.58:.1f}" ry="12" '
+                f'fill="{white}" stroke="{stick}" stroke-width="4.0"/>'
+            )
+
+        elif p == "bacteria_blob":
+            # Wobbly blob with short spikes around perimeter (gut bacteria)
+            bb_cx, bb_cy = W * 0.76, H * 0.36
+            bb_r = 44.0
+            blob_color = "#7BC87B"  # muted green
+            # Imperfect circle base
+            blob_path = _imperfect_circle_path(bb_cx, bb_cy, bb_r, rng, n=38, amp=3.5)
+            parts.append(
+                f'<path d="{blob_path}" fill="{blob_color}" '
+                f'stroke="{stick}" stroke-width="4.5" stroke-linejoin="round"/>'
+            )
+            # Short spikes around perimeter (flagella-like)
+            n_spikes = 7
+            for i in range(n_spikes):
+                ang = (2 * math.pi * i / n_spikes) + rng.uniform(-0.2, 0.2)
+                r_in = bb_r + 4 + rng.uniform(-2, 2)
+                r_out = bb_r + 20 + rng.uniform(-5, 5)
+                sx0 = bb_cx + r_in * math.cos(ang)
+                sy0 = bb_cy + r_in * math.sin(ang)
+                sx1 = bb_cx + r_out * math.cos(ang) + rng.uniform(-3, 3)
+                sy1 = bb_cy + r_out * math.sin(ang) + rng.uniform(-3, 3)
+                parts.append(
+                    _jittered_line(sx0, sy0, sx1, sy1, rng, stroke=stick, width=3.5)
+                )
+            # Single eye dot (gives it personality like the reference style)
+            parts.append(
+                f'<circle cx="{bb_cx - 12:.1f}" cy="{bb_cy - 8:.1f}" r="5" fill="{stick}"/>'
+            )
+            parts.append(
+                f'<circle cx="{bb_cx + 10:.1f}" cy="{bb_cy - 8:.1f}" r="5" fill="{stick}"/>'
+            )
+
+        elif p == "sneeze_burst":
+            # Radial particle burst (sneeze spray) from upper-left
+            # Origin roughly where a face would be when sneezing
+            bx_, by_ = W * 0.38, H * 0.32
+            n_rays = 12
+            burst_color = "#A8D4F0"  # pale blue droplets
+            for i in range(n_rays):
+                ang = (math.pi * 0.15) + (math.pi * 0.55 * i / (n_rays - 1)) + rng.uniform(-0.06, 0.06)
+                r1 = 30 + rng.uniform(-5, 5)
+                r2 = 80 + rng.uniform(-15, 15)
+                x0r = bx_ + r1 * math.cos(ang)
+                y0r = by_ + r1 * math.sin(ang)
+                x1r = bx_ + r2 * math.cos(ang)
+                y1r = by_ + r2 * math.sin(ang)
+                # Alternating lines and droplet dots
+                if i % 3 == 2:
+                    # Droplet dot at ray tip
+                    parts.append(
+                        f'<circle cx="{x1r:.1f}" cy="{y1r:.1f}" r="{5 + rng.uniform(-1,1):.1f}" '
+                        f'fill="{burst_color}" stroke="{stick}" stroke-width="2.5"/>'
+                    )
+                else:
+                    ray_path = _jittered_poly_path(
+                        [(x0r, y0r), (x1r, y1r)], rng, amp=0.8, mid_amp=1.5
+                    )
+                    w = 3.5 if i % 2 == 0 else 2.5
+                    parts.append(
+                        f'<path d="{ray_path}" fill="none" stroke="{burst_color}" '
+                        f'stroke-width="{w}" stroke-linecap="round"/>'
+                    )
+
+        elif p == "heat_waves":
+            # 3 wavy orange lines rising from lower-right (warm/temperature scenes)
+            # Matches reference image 3: orange squiggles above the cow
+            heat_orange = "#E87A2A"
+            wave_bases = [
+                (W * 0.66, H * 0.62),
+                (W * 0.72, H * 0.60),
+                (W * 0.78, H * 0.63),
+            ]
+            for wx, wy in wave_bases:
+                wx += rng.uniform(-4, 4)
+                # Each wave: rising S-curve
+                wave_h = 110.0 + rng.uniform(-10, 10)
+                amp_x = 18.0 + rng.uniform(-4, 4)
+                wave_pts = [
+                    (wx, wy),
+                    (wx + amp_x, wy - wave_h * 0.33),
+                    (wx - amp_x, wy - wave_h * 0.66),
+                    (wx, wy - wave_h),
+                ]
+                wave_path = _jittered_poly_path(wave_pts, rng, amp=1.5, mid_amp=4.0)
+                parts.append(
+                    f'<path d="{wave_path}" fill="none" stroke="{heat_orange}" '
+                    f'stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>'
+                )
+
+        elif p in get_all_props():
+            # Custom synthesized props are persisted outside this source file.
+            render_custom_prop(p, pal, W, H, rng, parts=parts)
+
     # Speech bubble (coral bars / optional text) — accent only here
     if "bubble" in props or bubble_bars > 0:
         ax, ay = bubble_anchor_xy or (W * 0.22, H * 0.38)
@@ -1247,9 +1515,9 @@ def build_stickman_svg(shot: ShotSpec, *, phase: float = 0.0) -> str:
     bg = _hex(pal["bg_teal"])
     slate = _hex(pal["bg_slate"])
     floor = _hex(pal["floor_line"])
-    # Soft cel: slightly darker floor band + wall base shade (flat fills, no gradients)
     floor_band = _pal_hex(pal, "floor_band", shade_of="bg_slate", shade_factor=0.88)
     wall_base = _pal_hex(pal, "wall_base_shade", shade_of="bg_teal", shade_factor=0.94)
+    bg_mode = getattr(shot, "bg_mode", "default")
 
     cast = shot.resolved_cast()
     props = shot.resolved_props()
@@ -1269,17 +1537,119 @@ def build_stickman_svg(shot: ShotSpec, *, phase: float = 0.0) -> str:
         )
         cast_positions[ch.role] = sk.xy("head")
 
-    layers: list[str] = [
-        f'<rect width="{W}" height="{H}" fill="{bg}"/>',
-        # Soft wall base band (cel) just above floor — flat value shift
-        f'<rect y="{H*0.70:.1f}" width="{W}" height="{H*0.08:.1f}" fill="{wall_base}" fill-opacity="0.55"/>',
-        f'<rect y="{H*0.78:.1f}" width="{W}" height="{H*0.22:.1f}" fill="{slate}"/>',
-        # Darker front floor strip for depth
-        f'<rect y="{H*0.90:.1f}" width="{W}" height="{H*0.10:.1f}" fill="{floor_band}" fill-opacity="0.65"/>',
-        # Clean floor line (slight jitter only) — interior room read
-        f'<path d="{_jittered_poly_path([(28, H*0.82), (W-28, H*0.82)], rng, amp=0.4, mid_amp=0.8)}" '
-        f'fill="none" stroke="{floor}" stroke-width="5.5" stroke-linecap="round"/>',
-    ]
+    # ── Background layers ────────────────────────────────────────────────────
+    if bg_mode == "outdoor_split":
+        # Reference image 3: white sky top half, flat green ground bottom half
+        sky_color  = _pal_hex(pal, "sky_white",   fallback_rgb=(240, 240, 240))
+        grass_color = _pal_hex(pal, "grass_green", fallback_rgb=(78, 154, 64))
+        horizon_y = H * 0.55   # where sky meets ground
+        layers: list[str] = [
+            # Sky
+            f'<rect width="{W}" height="{horizon_y:.1f}" fill="{sky_color}"/>',
+            # Ground
+            f'<rect y="{horizon_y:.1f}" width="{W}" height="{H - horizon_y:.1f}" fill="{grass_color}"/>',
+            # Hard horizon line
+            f'<path d="{_jittered_poly_path([(0, horizon_y), (W, horizon_y)], rng, amp=0.3, mid_amp=0.6)}" '
+            f'fill="none" stroke="{_pal_hex(pal, "floor_line", fallback_rgb=(42, 80, 24))}" '
+            f'stroke-width="4.0" stroke-linecap="round"/>',
+        ]
+    elif bg_mode == "sofa":
+        # Reference image 2: warm tan wall + teal sofa across lower third
+        layers = [
+            f'<rect width="{W}" height="{H}" fill="{bg}"/>',
+            f'<rect y="{H*0.70:.1f}" width="{W}" height="{H*0.08:.1f}" fill="{wall_base}" fill-opacity="0.55"/>',
+            f'<rect y="{H*0.78:.1f}" width="{W}" height="{H*0.22:.1f}" fill="{slate}"/>',
+            f'<rect y="{H*0.90:.1f}" width="{W}" height="{H*0.10:.1f}" fill="{floor_band}" fill-opacity="0.65"/>',
+            f'<path d="{_jittered_poly_path([(28, H*0.82), (W-28, H*0.82)], rng, amp=0.4, mid_amp=0.8)}" '
+            f'fill="none" stroke="{floor}" stroke-width="5.5" stroke-linecap="round"/>',
+        ]
+        # Draw teal sofa spanning most of width — reference image 2 style
+        sofa_fill  = _pal_hex(pal, "sofa_fill",  fallback_rgb=(90, 154, 138))
+        sofa_side  = _pal_hex(pal, "sofa_side",  fallback_rgb=(74, 128, 112))
+        sofa_back  = _pal_hex(pal, "sofa_back",  fallback_rgb=(58, 112, 96))
+        sx0, sx1 = W * 0.04, W * 0.96
+        sy_seat   = H * 0.62
+        sy_floor  = H * 0.82
+        sy_back_t = H * 0.38
+        sofa_depth = 30.0
+        # Sofa back
+        layers.append(
+            f'<rect x="{sx0:.1f}" y="{sy_back_t:.1f}" width="{sx1-sx0:.1f}" '
+            f'height="{sy_seat - sy_back_t:.1f}" fill="{sofa_back}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="5.0" stroke-linejoin="round"/>'
+        )
+        # Sofa seat
+        layers.append(
+            f'<rect x="{sx0:.1f}" y="{sy_seat:.1f}" width="{sx1-sx0:.1f}" '
+            f'height="{sy_floor - sy_seat:.1f}" fill="{sofa_fill}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="5.0" stroke-linejoin="round"/>'
+        )
+        # Sofa 3D depth strip (left arm)
+        arm_w = 36.0
+        layers.append(
+            f'<rect x="{sx0:.1f}" y="{sy_back_t:.1f}" width="{arm_w:.1f}" '
+            f'height="{sy_floor - sy_back_t:.1f}" fill="{sofa_side}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="4.0" stroke-linejoin="round"/>'
+        )
+        layers.append(
+            f'<rect x="{sx1 - arm_w:.1f}" y="{sy_back_t:.1f}" width="{arm_w:.1f}" '
+            f'height="{sy_floor - sy_back_t:.1f}" fill="{sofa_side}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="4.0" stroke-linejoin="round"/>'
+        )
+        # Sofa bottom depth band (front face)
+        layers.append(
+            f'<rect x="{sx0:.1f}" y="{sy_floor:.1f}" width="{sx1-sx0:.1f}" '
+            f'height="{sofa_depth:.1f}" fill="{sofa_side}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="4.0" stroke-linejoin="round"/>'
+        )
+    elif bg_mode == "bench":
+        # Reference image 4: blue-grey bg + rich blue bench
+        layers = [
+            f'<rect width="{W}" height="{H}" fill="{bg}"/>',
+            f'<rect y="{H*0.70:.1f}" width="{W}" height="{H*0.08:.1f}" fill="{wall_base}" fill-opacity="0.55"/>',
+            f'<rect y="{H*0.78:.1f}" width="{W}" height="{H*0.22:.1f}" fill="{slate}"/>',
+            f'<rect y="{H*0.90:.1f}" width="{W}" height="{H*0.10:.1f}" fill="{floor_band}" fill-opacity="0.65"/>',
+            f'<path d="{_jittered_poly_path([(28, H*0.82), (W-28, H*0.82)], rng, amp=0.4, mid_amp=0.8)}" '
+            f'fill="none" stroke="{floor}" stroke-width="5.5" stroke-linecap="round"/>',
+        ]
+        # Blue bench spanning ~90% of width (reference image 4)
+        bench_fill = _pal_hex(pal, "bench_fill", fallback_rgb=(74, 114, 168))
+        bench_side = _pal_hex(pal, "bench_side", fallback_rgb=(58, 90, 144))
+        bench_leg  = _pal_hex(pal, "bench_leg",  fallback_rgb=(42, 72, 120))
+        bx0, bx1  = W * 0.03, W * 0.97
+        by_top, by_bot = H * 0.68, H * 0.76
+        depth = 22.0
+        # Bench seat top face
+        layers.append(
+            f'<rect x="{bx0:.1f}" y="{by_top:.1f}" width="{bx1-bx0:.1f}" '
+            f'height="{by_bot - by_top:.1f}" fill="{bench_fill}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="5.5" stroke-linejoin="round"/>'
+        )
+        # Front face depth band
+        layers.append(
+            f'<rect x="{bx0:.1f}" y="{by_bot:.1f}" width="{bx1-bx0:.1f}" '
+            f'height="{depth:.1f}" fill="{bench_side}" '
+            f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="4.5" stroke-linejoin="round"/>'
+        )
+        # Bench legs (4)
+        leg_w = 18.0
+        leg_h = H * 0.82 - (by_bot + depth)
+        for lx in (bx0 + 22, bx0 + 22 + (bx1-bx0)*0.31, bx1 - 22 - (bx1-bx0)*0.31, bx1 - 22):
+            layers.append(
+                f'<rect x="{lx:.1f}" y="{by_bot + depth:.1f}" width="{leg_w:.1f}" '
+                f'height="{leg_h:.1f}" fill="{bench_leg}" '
+                f'stroke="{_hex(pal["stick_stroke"])}" stroke-width="4.0" stroke-linejoin="round"/>'
+            )
+    else:
+        # Standard default: teal/cream wall + slate floor
+        layers = [
+            f'<rect width="{W}" height="{H}" fill="{bg}"/>',
+            f'<rect y="{H*0.70:.1f}" width="{W}" height="{H*0.08:.1f}" fill="{wall_base}" fill-opacity="0.55"/>',
+            f'<rect y="{H*0.78:.1f}" width="{W}" height="{H*0.22:.1f}" fill="{slate}"/>',
+            f'<rect y="{H*0.90:.1f}" width="{W}" height="{H*0.10:.1f}" fill="{floor_band}" fill-opacity="0.65"/>',
+            f'<path d="{_jittered_poly_path([(28, H*0.82), (W-28, H*0.82)], rng, amp=0.4, mid_amp=0.8)}" '
+            f'fill="none" stroke="{floor}" stroke-width="5.5" stroke-linecap="round"/>',
+        ]
 
     bubble_anchor_xy = cast_positions.get(shot.bubble_anchor) or cast_positions.get("baby")
     if bubble_anchor_xy is None and cast_positions:
