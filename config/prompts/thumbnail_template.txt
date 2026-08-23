@@ -41,9 +41,9 @@ CEO CTR hardening (ctr_red): One dominant face/object, high-contrast focal point
 
 # === SMM THUMB REDESIGN napstorian ===
 SMM competitor-vision redesign (What-If punch):
-- Focal: commanding either — one dominant face OR bold map, never collage grid.
+- Focal: commanding face — one dominant face OR bold map, never collage grid.
 - Portrait LEFT / text RIGHT when face; map can fill with clean title zone.
-- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.
-- Title promise ≤ 5 words; competitor text density≈0.268.
-- Contrast target≈0.787; Rembrandt key + deep cinematic shadows.
+- Mood: warm_dramatic. Yellow promise text, black sharp stroke, high punch contrast.
+- Title promise ≤ 5 words; competitor text density≈0.289.
+- Contrast target≈0.668; Rembrandt key + deep cinematic shadows.
 # === END SMM THUMB REDESIGN ===

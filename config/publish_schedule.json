@@ -28,7 +28,7 @@
         0
       ],
       "note": "04:00 PKT / 23:00 UTC (previous calendar evening UTC). Legacy factory default. Frequency locked 15/mo.",
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.633635+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.172989+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours",
       "frequency_locked": true,
       "cadence_days": 2,
@@ -44,7 +44,7 @@
         3
       ],
       "note": "06:00 PKT / 01:00 UTC. Frequency locked 15/mo.",
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.635807+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.174684+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours",
       "frequency_locked": true,
       "cadence_days": 2,
@@ -59,7 +59,7 @@
         0
       ],
       "publish_hour_local": 23,
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.637912+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.176492+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "forgotten_empires": {
@@ -69,7 +69,7 @@
         1
       ],
       "publish_hour_local": 22,
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.639671+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.178240+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "science_history": {
@@ -79,7 +79,7 @@
         23
       ],
       "publish_hour_local": 18,
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.641457+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.179880+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "royal_courts": {
@@ -89,7 +89,7 @@
         0
       ],
       "publish_hour_local": 23,
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.643138+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.181479+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "business_empires": {
@@ -99,36 +99,37 @@
         0
       ],
       "publish_hour_local": 22,
-      "preferred_hours_updated_at": "2026-08-21T17:01:24.645170+00:00",
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.183083+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "money_history": {
       "preferred_hours": [
-        1,
-        3,
-        2
+        16,
+        18,
+        17
       ],
-      "publish_hour_local": 1,
-      "preferred_hours_updated_at": "2026-08-21T17:05:33.362140+00:00",
+      "publish_hour_local": 16,
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.185331+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "war_tech_history": {
       "preferred_hours": [
-        23,
-        0
+        6,
+        8,
+        7
       ],
-      "publish_hour_local": 23,
-      "preferred_hours_updated_at": "2026-08-21T18:00:37.967458+00:00",
+      "publish_hour_local": 6,
+      "preferred_hours_updated_at": "2026-08-22T17:09:05.186981+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     },
     "philosophy_sleep": {
       "preferred_hours": [
-        23,
-        22,
-        0
+        11,
+        16,
+        21
       ],
-      "publish_hour_local": 23,
-      "preferred_hours_updated_at": "2026-08-21T16:06:18.992407+00:00",
+      "publish_hour_local": 11,
+      "preferred_hours_updated_at": "2026-08-22T17:09:02.000459+00:00",
       "preferred_hours_source": "ceo_competitor_upload_hours"
     }
   },

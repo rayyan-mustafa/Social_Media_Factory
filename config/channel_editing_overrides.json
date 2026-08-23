@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-21T18:06:35.989996+00:00",
+  "updated_at": "2026-08-23T00:00:04.981672+00:00",
   "notes": "Runtime SMM editing overrides — auto-written by premium_editor_smm / apply_editing_lever. Safe to mutate without Rayyan consent.",
   "channels": {
     "napstorian": {
@@ -11,23 +11,23 @@
         "thumbnail_style": {
           "preset": "napstorian_punch",
           "focal_subject": "face_or_map",
-          "map_vs_face": "either",
+          "map_vs_face": "face",
           "word_count_max": 5,
           "text_color": "yellow",
           "stroke": "black_sharp",
           "contrast_boost": 1.2,
-          "mood": "dramatic",
-          "text_density_est": 0.268,
-          "color_contrast_est": 0.787,
+          "mood": "warm_dramatic",
+          "text_density_est": 0.289,
+          "color_contrast_est": 0.668,
           "source": "smm_thumb_redesign",
-          "updated_at": "2026-08-21T18:06:10.415065+00:00"
+          "updated_at": "2026-08-23T00:00:04.688377+00:00"
         },
-        "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding either — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.268.\n- Contrast target≈0.787; Rembrandt key + deep cinematic shadows."
+        "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding face — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: warm_dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.289.\n- Contrast target≈0.668; Rembrandt key + deep cinematic shadows."
       },
       "active_experiment": {
         "lever": "hook_pattern",
         "value": "ticking_clock",
-        "applied_at": "2026-08-21T18:06:35.983490+00:00",
+        "applied_at": "2026-08-23T00:00:04.975894+00:00",
         "baseline_overrides": {
           "hook_pattern": {
             "default": "ticking_clock"
@@ -35,24 +35,24 @@
           "thumbnail_style": {
             "preset": "napstorian_punch",
             "focal_subject": "face_or_map",
-            "map_vs_face": "either",
+            "map_vs_face": "face",
             "word_count_max": 5,
             "text_color": "yellow",
             "stroke": "black_sharp",
             "contrast_boost": 1.2,
-            "mood": "dramatic",
-            "text_density_est": 0.268,
-            "color_contrast_est": 0.787,
+            "mood": "warm_dramatic",
+            "text_density_est": 0.289,
+            "color_contrast_est": 0.668,
             "source": "smm_thumb_redesign",
-            "updated_at": "2026-08-21T18:06:10.415065+00:00"
+            "updated_at": "2026-08-23T00:00:04.688377+00:00"
           },
-          "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding either — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.268.\n- Contrast target≈0.787; Rembrandt key + deep cinematic shadows."
+          "thumb_prompt_addendum": "SMM competitor-vision redesign (What-If punch):\n- Focal: commanding face — one dominant face OR bold map, never collage grid.\n- Portrait LEFT / text RIGHT when face; map can fill with clean title zone.\n- Mood: warm_dramatic. Yellow promise text, black sharp stroke, high punch contrast.\n- Title promise ≤ 5 words; competitor text density≈0.289.\n- Contrast target≈0.668; Rembrandt key + deep cinematic shadows."
         }
       },
-      "updated_at": "2026-08-21T18:06:35.984995+00:00",
+      "updated_at": "2026-08-23T00:00:04.977514+00:00",
       "editing_directive": {
         "channel": "napstorian",
-        "created_at": "2026-08-21T18:06:35.982608+00:00",
+        "created_at": "2026-08-23T00:00:04.974624+00:00",
         "source": "premium_editor_smm",
         "profile_label": "dramatic What-If documentary",
         "dominant_competitor_form": "mid_form_drama",
@@ -64,16 +64,16 @@
         "thumbnail_style": {
           "preset": "napstorian_punch",
           "focal_subject": "face_or_map",
-          "map_vs_face": "either",
+          "map_vs_face": "face",
           "word_count_max": 5,
           "text_color": "yellow",
           "stroke": "black_sharp",
           "contrast_boost": 1.2,
-          "mood": "dramatic",
-          "text_density_est": 0.268,
-          "color_contrast_est": 0.787,
+          "mood": "warm_dramatic",
+          "text_density_est": 0.289,
+          "color_contrast_est": 0.668,
           "source": "smm_thumb_redesign",
-          "updated_at": "2026-08-21T18:06:10.415065+00:00"
+          "updated_at": "2026-08-23T00:00:04.688377+00:00"
         },
         "compose": {
           "sfx_density": "high",
@@ -165,7 +165,7 @@
     "napping_historian": {
       "editing_directive": {
         "channel": "napping_historian",
-        "created_at": "2026-08-21T18:06:35.987804+00:00",
+        "created_at": "2026-08-23T00:00:04.980112+00:00",
         "source": "premium_editor_smm",
         "profile_label": "History Calling–like mystery documentary",
         "dominant_competitor_form": "mystery_doc",
@@ -183,10 +183,10 @@
           "stroke": "soft_dark",
           "contrast_boost": 1.05,
           "mood": "moody_calm",
-          "text_density_est": 0.377,
-          "color_contrast_est": 0.718,
+          "text_density_est": 0.325,
+          "color_contrast_est": 0.721,
           "source": "smm_thumb_redesign",
-          "updated_at": "2026-08-21T18:06:35.978063+00:00"
+          "updated_at": "2026-08-23T00:00:04.969371+00:00"
         },
         "compose": {
           "sfx_density": "none",
@@ -328,7 +328,7 @@
           "value": "false_assumption"
         }
       },
-      "updated_at": "2026-08-21T18:06:35.989983+00:00",
+      "updated_at": "2026-08-23T00:00:04.981660+00:00",
       "overrides": {
         "hook_pattern": {
           "default": "false_assumption"
@@ -342,17 +342,17 @@
           "stroke": "soft_dark",
           "contrast_boost": 1.05,
           "mood": "moody_calm",
-          "text_density_est": 0.377,
-          "color_contrast_est": 0.718,
+          "text_density_est": 0.325,
+          "color_contrast_est": 0.721,
           "source": "smm_thumb_redesign",
-          "updated_at": "2026-08-21T18:06:35.978063+00:00"
+          "updated_at": "2026-08-23T00:00:04.969371+00:00"
         },
-        "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.\n- Contrast target≈0.718; keep nocturnal candle key + deep vignette."
+        "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.325.\n- Contrast target≈0.721; keep nocturnal candle key + deep vignette."
       },
       "active_experiment": {
         "lever": "hook_pattern",
         "value": "false_assumption",
-        "applied_at": "2026-08-21T18:06:35.988288+00:00",
+        "applied_at": "2026-08-23T00:00:04.980574+00:00",
         "baseline_overrides": {
           "hook_pattern": {
             "default": "false_assumption"
@@ -366,12 +366,12 @@
             "stroke": "soft_dark",
             "contrast_boost": 1.05,
             "mood": "moody_calm",
-            "text_density_est": 0.377,
-            "color_contrast_est": 0.718,
+            "text_density_est": 0.325,
+            "color_contrast_est": 0.721,
             "source": "smm_thumb_redesign",
-            "updated_at": "2026-08-21T18:06:35.978063+00:00"
+            "updated_at": "2026-08-23T00:00:04.969371+00:00"
           },
-          "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.\n- Contrast target≈0.718; keep nocturnal candle key + deep vignette."
+          "thumb_prompt_addendum": "SMM competitor-vision redesign (History Calling–like mystery):\n- Focal: Secret Document / artifact dominates; map_vs_face=artifact.\n- Watcher face stays secondary silhouette — parchment/seal is the click magnet.\n- Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.\n- Gold/title promise ≤ 4 words; estimated competitor text density≈0.325.\n- Contrast target≈0.721; keep nocturnal candle key + deep vignette."
         }
       }
     },

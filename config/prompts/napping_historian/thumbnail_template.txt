@@ -46,6 +46,6 @@ SMM competitor-vision redesign (History Calling–like mystery):
 - Focal: Secret Document / artifact dominates; map_vs_face=artifact.
 - Watcher face stays secondary silhouette — parchment/seal is the click magnet.
 - Mood: moody_calm. Soft white title text, soft dark stroke, low collage clutter.
-- Gold/title promise ≤ 4 words; estimated competitor text density≈0.377.
-- Contrast target≈0.718; keep nocturnal candle key + deep vignette.
+- Gold/title promise ≤ 4 words; estimated competitor text density≈0.325.
+- Contrast target≈0.721; keep nocturnal candle key + deep vignette.
 # === END SMM THUMB REDESIGN ===

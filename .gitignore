@@ -37,3 +37,4 @@ clients/*/config.json
 # WhatsApp lead capture log
 output/leadgen_live/whatsapp_leads.csv
 output/
+output/
