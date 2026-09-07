@@ -38,3 +38,7 @@ clients/*/config.json
 output/leadgen_live/whatsapp_leads.csv
 output/
 output/
+
+# microstock vector engine
+output/microstock/
+config/microstock/*_credentials.json

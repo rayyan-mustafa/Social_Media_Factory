@@ -1,0 +1,127 @@
+{
+  "enabled": false,
+  "_enabled_note": "Master switch. Stays false until API keys + platform accounts are live. Nothing in the beat runs while this is false.",
+  "daily_asset_target": 200,
+  "beats_per_day": 48,
+  "max_assets_per_beat": 12,
+  "min_brief_stock": 60,
+  "generator": {
+    "backend": "gemini",
+    "_backend_options": [
+      "gemini",
+      "seedream",
+      "mock"
+    ],
+    "gemini": {
+      "model": "gemini-2.5-flash-image",
+      "_model_note": "Nano Banana. Swap to 'gemini-3-pro-image-preview' for Nano Banana Pro.",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
+      "response_modalities": [
+        "IMAGE"
+      ],
+      "aspect_ratio": "1:1",
+      "timeout_s": 120,
+      "max_retries": 3,
+      "min_interval_s": 2.0,
+      "daily_quota_guess": 200,
+      "_quota_note": "Google AI Pro covers the Gemini app/AI Studio UI, not API quota. On sustained 429 the beat parks remaining briefs instead of burning retries."
+    },
+    "seedream": {
+      "size": "1024*1024",
+      "usd_per_image": 0.035
+    }
+  },
+  "vectorizer": {
+    "colormode": "color",
+    "hierarchical": "stacked",
+    "mode": "polygon",
+    "filter_speckle": 8,
+    "color_precision": 6,
+    "layer_difference": 24,
+    "corner_threshold": 60,
+    "length_threshold": 4.0,
+    "max_iterations": 10,
+    "splice_threshold": 45,
+    "path_precision": 2,
+    "_note": "filter_speckle 8 + color_precision 6 keeps flat commercial art clean without shredding gradients. Tune here, never in code.",
+    "_mode_note": "polygon, not spline: we flatten curves to polylines during simplification anyway, and polygon traces start ~35% smaller (measured 104KB vs 537KB on the same source). Set spline + cleaner.simplify_mode=preserve_curves if a niche needs smooth organic curves."
+  },
+  "cleaner": {
+    "canvas": 1024,
+    "simplify_epsilon": 2.0,
+    "_epsilon_note": "Douglas-Peucker tolerance in viewBox units (1024 canvas), so 2.0 is a ~2px deviation. Measured on a photographic worst case: eps 1.0=33%, 2.0=53%, 3.0=61% node reduction. Flat vector art reduces far more. The fidelity gate catches anything simplified past recognition.",
+    "strip_tags": [
+      "image",
+      "foreignObject",
+      "script",
+      "metadata",
+      "title",
+      "desc"
+    ],
+    "background_coverage_threshold": 0.98,
+    "strip_background": true,
+    "simplify_mode": "flatten",
+    "_simplify_mode_options": [
+      "flatten",
+      "preserve_curves"
+    ],
+    "curve_flatten_tolerance": 0.5
+  },
+  "gate": {
+    "max_anchor_points": 8000,
+    "max_file_bytes": 2097152,
+    "require_viewbox": true,
+    "forbid_raster": true,
+    "fidelity_check": true,
+    "fidelity_render_px": 256,
+    "max_mean_pixel_diff": 18.0,
+    "_fidelity_note": "Renders raw trace vs cleaned SVG via cairosvg and compares. Catches simplification that destroyed the artwork.",
+    "_anchor_note": "ABSOLUTE anchor budget is the real gate — this is what platforms reject on. Node-reduction percentage is recorded for tuning but is deliberately NOT a pass condition: an asset that traced cleanly and needed no simplification must not be failed for having little to reduce.",
+    "report_node_reduction": true
+  },
+  "tagger": {
+    "backend": "openrouter",
+    "_backend_options": [
+      "openrouter",
+      "gemini",
+      "mock"
+    ],
+    "model": "openrouter/free",
+    "gemini_model": "gemini-2.5-flash",
+    "title_min_words": 5,
+    "title_max_words": 10,
+    "keywords_min": 25,
+    "keywords_max": 35,
+    "min_interval_s": 1.8,
+    "max_retries": 3,
+    "_note": "Tagging defaults to openrouter/free so the whole Gemini quota can be spent on image generation."
+  },
+  "distribution": {
+    "enabled": false,
+    "_enabled_note": "Hard second gate. Even with master enabled, nothing leaves this machine until this is true.",
+    "dry_run": true,
+    "release_order": [
+      "adobe_stock",
+      "vecteezy",
+      "depositphotos",
+      "dreamstime",
+      "123rf",
+      "freepik"
+    ],
+    "_order_note": "Highest royalty first, so a backlog always drains toward the best payout."
+  },
+  "budget": {
+    "monthly_budget_usd": 25.0,
+    "_note": "Gemini path records $0. The ceiling exists so a silent switch to a paid backend cannot run away with spend."
+  },
+  "politeness": {
+    "skip_if_farm_busy": true,
+    "farm_busy_statuses": [
+      "visuals",
+      "edit",
+      "farming",
+      "tts"
+    ],
+    "_note": "vtracer is CPU-heavy. Never contend with the video farm's ffmpeg/encode stages."
+  }
+}

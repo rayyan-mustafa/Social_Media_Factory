@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512">
+  <metadata>should be stripped</metadata>
+  <title>should be stripped</title>
+  <rect x="0" y="0" width="1024" height="1024" fill="#ffffff"/>
+  <g id="layer1">
+    <image x="0" y="0" width="64" height="64" xlink:href="data:image/png;base64,iVBORw0KGgo="/>
+    <g id="nested-deeper">
+      <image x="10" y="10" width="32" height="32" href="data:image/png;base64,iVBORw0KGgo="/>
+      <path d="M100 100 L200 100 L200 200 L100 200 Z" fill="#3366cc"/>
+    </g>
+    <foreignObject width="10" height="10"><div/></foreignObject>
+  </g>
+  <script>alert(1)</script>
+  <path d="M300 300 L301 300.4 L302 300 L303 300.3 L304 300 L400 400 L300 400 Z" fill="#cc3366"/>
+</svg>

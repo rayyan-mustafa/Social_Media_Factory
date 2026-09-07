@@ -12,3 +12,7 @@ google-auth-httplib2>=0.2.0
 # Optional for ARQ beat worker:
 # arq>=0.26.0
 # redis>=5.0.0
+
+# microstock vector engine
+vtracer>=0.6.15
+lxml>=6.1.0

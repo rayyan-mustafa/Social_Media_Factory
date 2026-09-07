@@ -1,0 +1,99 @@
+{
+  "_note": "Platform matrix from roadmap.txt section 1. NEVER put credentials here — this file is committed. FTP creds come from .env as MICROSTOCK_FTP_<PLATFORM>_{HOST,USER,PASS}.",
+  "platforms": [
+    {
+      "name": "adobe_stock",
+      "display": "Adobe Stock",
+      "priority": 1,
+      "enabled": false,
+      "tier": "manual_review",
+      "_tier_note": "No contributor upload API. Web UI drag-drop + CSV only.",
+      "ai_policy": "allowed",
+      "requires_ai_disclosure": true,
+      "daily_cap": 40,
+      "_daily_cap_note": "30-50/day dynamic on account score. 40 is a safe midpoint.",
+      "formats": ["svg"],
+      "payout": "Payoneer -> PK bank / JazzCash"
+    },
+    {
+      "name": "vecteezy",
+      "display": "Vecteezy",
+      "priority": 2,
+      "enabled": false,
+      "tier": "auto",
+      "ai_policy": "allowed",
+      "requires_ai_disclosure": true,
+      "daily_cap": 200,
+      "max_files_per_folder": 999,
+      "ftp": { "host_env": "MICROSTOCK_FTP_VECTEEZY_HOST", "default_host": "ftp.vecteezy.com", "use_tls": true },
+      "formats": ["svg"],
+      "payout": "Payoneer / Skrill -> PK bank"
+    },
+    {
+      "name": "depositphotos",
+      "display": "Depositphotos",
+      "priority": 3,
+      "enabled": false,
+      "tier": "auto",
+      "ai_policy": "allowed",
+      "requires_ai_disclosure": true,
+      "daily_cap": 200,
+      "ftp": { "host_env": "MICROSTOCK_FTP_DEPOSITPHOTOS_HOST", "default_host": "ftp.depositphotos.com", "use_tls": true },
+      "formats": ["svg", "eps"],
+      "payout": "Payoneer / Skrill -> PK bank"
+    },
+    {
+      "name": "dreamstime",
+      "display": "Dreamstime",
+      "priority": 4,
+      "enabled": false,
+      "tier": "auto",
+      "ai_policy": "allowed",
+      "requires_ai_disclosure": true,
+      "daily_cap": 200,
+      "ftp": { "host_env": "MICROSTOCK_FTP_DREAMSTIME_HOST", "default_host": "ftp.dreamstime.com", "use_tls": true },
+      "formats": ["svg", "eps"],
+      "payout": "Payoneer / Skrill -> PK bank"
+    },
+    {
+      "name": "123rf",
+      "display": "123RF",
+      "priority": 5,
+      "enabled": false,
+      "tier": "auto",
+      "ai_policy": "allowed",
+      "requires_ai_disclosure": true,
+      "daily_cap": 200,
+      "ftp": { "host_env": "MICROSTOCK_FTP_123RF_HOST", "default_host": "ftp.123rf.com", "use_tls": true },
+      "formats": ["svg"],
+      "payout": "Payoneer -> PK bank"
+    },
+    {
+      "name": "freepik",
+      "display": "Freepik",
+      "priority": 6,
+      "enabled": false,
+      "tier": "manual_review",
+      "_tier_note": "Strict AI tier system. FTP only unlocks at Level 3.",
+      "ai_policy": "restricted",
+      "requires_ai_disclosure": true,
+      "daily_cap": 20,
+      "lifetime_cap_until_approved": 200,
+      "_lifetime_note": "Tier 1 requires 150-200 high-grade vectors total before approval. drip.py stops at lifetime_cap_until_approved.",
+      "formats": ["svg"],
+      "payout": "Payoneer -> PK bank"
+    },
+    {
+      "name": "shutterstock",
+      "display": "Shutterstock",
+      "priority": 99,
+      "enabled": false,
+      "permanently_excluded": true,
+      "tier": "none",
+      "ai_policy": "banned",
+      "_excluded_reason": "Prohibits contributor uploads of third-party AI assets. Never enable — uploading here risks the whole account.",
+      "daily_cap": 0,
+      "formats": []
+    }
+  ]
+}

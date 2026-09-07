@@ -1,0 +1,72 @@
+{
+  "_note": "Niche matrix from roadmap.txt section 3. 'weight' drives brief selection; stock_smm.py multiplies it by observed sales to bias future batches. Weights need not sum to 1 — they are normalised at pick time.",
+  "niches": [
+    {
+      "name": "b2b_saas_ui",
+      "display": "B2B SaaS & Tech UI Widgets",
+      "demand": "very_high",
+      "competition": "low_moderate",
+      "weight": 1.0,
+      "enabled": true,
+      "deliverables": ["analytics charts", "dark-mode dashboard cards", "cloud infrastructure nodes", "data flow diagrams"],
+      "buyers": ["tech startups", "app developers", "product managers", "SaaS marketing teams"],
+      "style_hint": "flat vector, limited palette, crisp geometry, generous whitespace, no gradients heavier than two stops"
+    },
+    {
+      "name": "industry_infographics",
+      "display": "Industry Infographic Sets",
+      "demand": "high",
+      "competition": "low",
+      "weight": 1.0,
+      "enabled": true,
+      "deliverables": ["cyber security shields", "renewable energy workflows", "medical clinical steps", "supply chain logistics"],
+      "buyers": ["B2B agencies", "slide deck designers", "corporate report creators"],
+      "style_hint": "flat isometric or straight-on infographic, numbered steps, consistent stroke weight, muted corporate palette"
+    },
+    {
+      "name": "regional_cultural",
+      "display": "Regional & Cultural Events",
+      "demand": "high",
+      "competition": "low",
+      "weight": 0.9,
+      "enabled": true,
+      "deliverables": ["Eid and Ramadan geometric patterns", "Islamic calligraphy ornament", "Diwali motifs", "Lunar New Year banners"],
+      "buyers": ["regional marketing agencies", "local businesses", "social media managers"],
+      "style_hint": "symmetrical geometric ornament, flat two-to-four colour, clean repeating motif, no photographic texture"
+    },
+    {
+      "name": "occupational_flat",
+      "display": "Specialized Occupational Flat Sets",
+      "demand": "high",
+      "competition": "moderate",
+      "weight": 0.7,
+      "enabled": true,
+      "deliverables": ["characters operating machinery", "solar technicians", "logistics operators", "drone pilots"],
+      "buyers": ["onboarding manuals", "corporate training platforms", "educational materials"],
+      "style_hint": "flat character illustration, simple shapes, no facial detail beyond basic features, consistent proportions"
+    },
+    {
+      "name": "packaging_dielines",
+      "display": "Packaging & Product Dielines",
+      "demand": "high",
+      "competition": "low",
+      "weight": 0.9,
+      "enabled": true,
+      "deliverables": ["box folding cut lines", "eco-friendly badge stamps", "minimalist botanical frames", "organic seals"],
+      "buyers": ["e-commerce brands", "packaging designers", "artisan product makers"],
+      "style_hint": "line-art or two-tone stamp, precise strokes, high contrast on transparent ground, print-ready simplicity"
+    },
+    {
+      "name": "abstract_geometric",
+      "display": "Abstract Geometric & Glassmorphism",
+      "demand": "very_high",
+      "competition": "high",
+      "weight": 0.5,
+      "_weight_note": "Very high demand but high competition — deliberately down-weighted so the engine does not drown in the most crowded category.",
+      "enabled": true,
+      "deliverables": ["fluid gradient vectors", "modern glassmorphism headers", "dark-mode mesh backgrounds"],
+      "buyers": ["web designers", "YouTube thumbnail creators", "digital agencies"],
+      "style_hint": "bold flat shapes with at most simple linear gradients — heavy blur and mesh gradients do not vectorise cleanly, prefer crisp geometry"
+    }
+  ]
+}
