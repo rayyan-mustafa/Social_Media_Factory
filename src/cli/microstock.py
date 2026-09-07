@@ -9,6 +9,11 @@ Examples:
   .venv/bin/python -m src.cli.microstock run   --prompt "isometric supply chain" --backend mock
   .venv/bin/python -m src.cli.microstock run   --source-png some.png
   .venv/bin/python -m src.cli.microstock doctor
+  .venv/bin/python -m src.cli.microstock beat --dry-run
+  .venv/bin/python -m src.cli.microstock harvest --target 60 --no-llm
+  .venv/bin/python -m src.cli.microstock plan
+  .venv/bin/python -m src.cli.microstock confirm --platform adobe_stock --batch <id>
+  .venv/bin/python -m src.cli.microstock crontab
 """
 
 from __future__ import annotations
@@ -226,6 +231,130 @@ def run_cmd(
     console.print_json(data=result.as_dict())
     if not result.passed:
         raise typer.Exit(1)
+
+
+@app.command("beat")
+def beat_cmd(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Plan every step, change nothing"),
+    max_assets: int | None = typer.Option(None, "--max-assets"),
+    backend: str | None = typer.Option(None, "--backend"),
+    skip_gates: bool = typer.Option(False, "--skip-gates", help="Bypass enable/disk/politeness gates (testing)"),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Use template briefs instead of the LLM"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Run one unattended cycle: harvest -> produce -> gate -> tag -> drip."""
+    _setup_logging(verbose)
+    from src.microstock.stock_factory import run_beat
+
+    result = run_beat(
+        max_assets=max_assets, backend=backend, dry_run=dry_run,
+        skip_gates=skip_gates, use_llm=not no_llm,
+    )
+    console.print_json(data=result)
+
+
+@app.command("harvest")
+def harvest_cmd(
+    target: int | None = typer.Option(None, "--target"),
+    no_llm: bool = typer.Option(False, "--no-llm"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Top the brief stock back up to target."""
+    _setup_logging(verbose)
+    from src.microstock import brief_harvest
+
+    console.print_json(data=brief_harvest.maybe_refill(
+        target=target, use_llm=not no_llm, dry_run=dry_run
+    ))
+
+
+@app.command("tag")
+def tag_cmd(
+    image: Path = typer.Option(..., "--input", "-i"),
+    backend: str | None = typer.Option(None, "--backend", help="openrouter | mock"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Generate stock metadata for one raster."""
+    _setup_logging(verbose)
+    from src.microstock.ai_tagger import TagError, tag_image
+
+    try:
+        metadata = tag_image(image, backend=backend)
+    except TagError as exc:
+        console.print(f"[red]tagging failed:[/] {exc}")
+        raise typer.Exit(1) from exc
+    console.print_json(data=metadata.as_dict())
+
+
+@app.command("plan")
+def plan_cmd() -> None:
+    """Show what each platform would receive on the next release."""
+    from src.microstock import drip
+
+    rows = drip.plan()
+    if not rows:
+        console.print("[yellow]no enabled platforms — distribution is inert[/]")
+        return
+    table = Table(title="Drip plan (highest royalty first)")
+    for column in ("platform", "tier", "pending", "allowance", "releasing", "backlog"):
+        table.add_column(column, justify="right" if column != "platform" else "left")
+    for row in rows:
+        table.add_row(
+            row["platform"], str(row["tier"]), str(row["pending"]),
+            str(row["allowance"]), str(row["releasing"]), str(row["backlog"]),
+        )
+    console.print(table)
+
+
+@app.command("release")
+def release_cmd(
+    dry_run: bool = typer.Option(True, "--dry-run/--live", help="--live actually uploads"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Release one beat's allowance to each platform."""
+    _setup_logging(verbose)
+    from src.microstock import drip
+
+    console.print_json(data=drip.release(dry_run=dry_run))
+
+
+@app.command("confirm")
+def confirm_cmd(
+    platform: str = typer.Option(..., "--platform"),
+    batch: str | None = typer.Option(None, "--batch", help="Outbox batch id; omit to pass --asset-id"),
+    asset_id: list[str] = typer.Option([], "--asset-id"),
+) -> None:
+    """Record that you actually submitted a staged manual batch."""
+    from src.microstock import drip, paths
+
+    ids = list(asset_id)
+    if batch:
+        folder = paths.outbox_for(platform, batch)
+        if not folder.is_dir():
+            console.print(f"[red]no such batch:[/] {folder}")
+            raise typer.Exit(1)
+        ids += [p.stem for p in folder.glob("*.svg")]
+    if not ids:
+        console.print("[red]need --batch or --asset-id[/]")
+        raise typer.Exit(2)
+    console.print_json(data=drip.confirm_manual_upload(platform, sorted(set(ids))))
+
+
+@app.command("crontab")
+def crontab_cmd() -> None:
+    """Print the cron line for unattended operation."""
+    line = (
+        f"*/30 * * * * cd {paths.ROOT} && .venv/bin/python -m src.cli.microstock beat "
+        f">> {paths.OPS_DIR.relative_to(paths.ROOT)}/beat.log 2>&1"
+    )
+    console.print("[bold]Add this to crontab -e:[/]\n")
+    console.print(f"  {line}\n")
+    console.print(
+        "[dim]Deliberately separate from the video farm beats so a microstock\n"
+        "failure can never stall video production. Do not install until\n"
+        "settings.json -> enabled is true and doctor passes.[/]"
+    )
 
 
 if __name__ == "__main__":

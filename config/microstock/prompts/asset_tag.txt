@@ -1,0 +1,20 @@
+# Vision tagging prompt for microstock metadata. Enforced again in code.
+Analyse this vector asset for stock agency submission.
+
+Return ONLY a valid JSON object, no prose, matching exactly:
+{
+  "title": "clean descriptive title of {{TITLE_MIN}} to {{TITLE_MAX}} words",
+  "category": "one standard commercial category (Technology, Business, Icons, Nature, People, Abstract, Food, Healthcare, Education, Industrial)",
+  "keywords": ["between {{KW_MIN}} and {{KW_MAX}} unique lowercase keywords"]
+}
+
+TITLE RULES:
+- Describe what the asset actually shows, as a human would say it.
+- NEVER keyword-stuff. "icon vector graphic design flat asset" is an automatic rejection.
+- No trailing filler like "vector illustration EPS10".
+
+KEYWORD RULES:
+- The first 5 keywords must be the core subject — search ranking weights them most.
+- Every keyword must be genuinely present in or true of the image.
+- Include a mix of: literal objects, the visual style, and the likely commercial use case.
+- No brand names, no artist names, no misleading trend words.
