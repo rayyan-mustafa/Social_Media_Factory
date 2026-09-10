@@ -38,6 +38,10 @@ clients/*/config.json
 output/leadgen_live/whatsapp_leads.csv
 output/
 output/
+output/**
+!output/**/
+!output/**/.gitkeep
+*.log
 
 # microstock vector engine
 output/microstock/
